@@ -25,6 +25,9 @@ init_local_conf()
 	export patches_files="$feed_files/patches"
 	
 	echo "export pass=\"123456\"	#need to rework" >> $local_conf_file
+
+	echo "export standmng_pkg=\"postgresql-test\"" >> $local_conf_file
+	export standmng_pkg="postgresql-test"
 	}
 
 if [ ! -e $conf_file ]
@@ -65,6 +68,8 @@ update_sshconnection_forall()
 		done
 	}
 
+# Write changes to config files
+# Copy all files except local conf to other machines
 update_conf()
 	{
 	echo "Updating config's files..."
@@ -193,17 +198,10 @@ add()
 	node=$param1
 	ip=$param2
 
-	find $node
-	if [ "$?" = "1" ]
-	then
-		echo "Error: This node is already exist!"
-		exit 1
-	fi
-
 	find $ip
 	if [ "$?" = "1" ]
 	then
-		echo "Error: This ip_address is already exist!"
+		echo "Error: The machine with such IP address is already exist!"
 		exit 1
 	fi
 
@@ -356,6 +354,8 @@ case $what_todo in
 		node=$param1
 		ip=$param2
 
+		install_newpatches
+
 		$nodes_rules check $node
 		if [ "$?" = "0" ]
 		then
@@ -369,17 +369,31 @@ case $what_todo in
 		if [ "$?" = "1" ]
 		then
 			echo "Error: The stand isn't alive fully"
-			standmng del $node
+			standmng del $ip
 			exit 1 
 		fi
 
 		set_sshconnect_toall
+
+		echo -e "\n $standmng_pkg is installing..."
+		ssh -T root@$ip "yum -y -q install $standmng_pkg"
+		if [ "$?" = "1" ]
+		then
+			echo "Error: Can't install $standmng_pkg. May be you need set repo at first"
+			standmng del $ip
+			exit 1 
+		fi
 
 		update_conf
 		
 		update_sshconnection_forall
 
 		$nodes_rules install $node
+                if [ "$?" != "0" ]
+                then
+                        echo "Error: During execution $nodes_rules"
+                        exit 1
+                fi
 	
 		echo "The new machine has been added"
 		stand_list
@@ -391,6 +405,7 @@ case $what_todo in
                         echo "Error: Input parameter isn't set!"
                         exit 1
                 fi
+		ip=$param1
 
                 CheckStandAlive
                 if [ "$?" = "1" ]
@@ -399,26 +414,26 @@ case $what_todo in
                         exit 1
                 fi
 
-                find $param1
+                find $ip
                 if [ "$?" = "0" ]
                 then
                         echo "Error: Can't find this machine!"
                         exit 1
                 fi
 
-		get_index $param1
-		node=standnodes[$gotindex]
+		get_index $ip
+		node=${standnodes[$gotindex]}
 
                 ssh -T root@$ip <<-EOF
                         $nodes_rules erase $node
 			EOF
-                if [ "$?" = "0" ]
+                if [ "$?" != "0" ]
                 then
                         echo "Error: During execution $nodes_rules"
                         exit 1
                 fi
 
-                del $param1
+                del $ip
                 update_conf
 
                 echo "The machine has been deleted"
@@ -474,7 +489,7 @@ case $what_todo in
 standmng --stand manager
 \tlist\t--list of machines in current stand configuration
 \tadd <node_name> <ip_addr>\t--add a new machine to stand
-\tdel <node_name OR ip_addr>\t--del the machine from stand by its <node_name> or <ip_addr>
+\tdel <ip_addr>\t--del the machine from stand by its <ip_addr>
 \tnodes\t--list of availiable nodes
 \talive\t--check alive of the stand's machine
 \tpatches\t
@@ -482,7 +497,7 @@ standmng --stand manager
 "
 		;;
 	*)
-		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <node_name OR ip_addr> | nodes | alive | patches { install } }"
+		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <ip_addr> | nodes | alive | patches { install } }"
 		exit 1
 		;;
 esac

@@ -1,4 +1,6 @@
 ToHost:
+rm -Rf ./zarya_bin
+rm -Rf ./zarya_etc
 scp -r root@192.168.10.45:/usr/bin/zarya ./zarya_bin
 scp -r root@192.168.10.45:/usr/etc/zarya ./zarya_etc
 

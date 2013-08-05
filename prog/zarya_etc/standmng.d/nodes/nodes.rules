@@ -57,14 +57,15 @@ install()
 
 	case $node in
 		${AvailNodes[0]}) #Master
-		        master_ip="`standmng get Master`"
-			if [ "$master_ip" != "" ]
-			then
-	                ssh -T root@$master_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Master.node install
-				EOF
-			fi
+			echo -e "Master installing... \n"
+#		        master_ip="`standmng get Master`"
+#			if [ "$master_ip" != "" ]
+#			then
+#	                ssh -T root@$master_ip <<-EOF
+#        	                standmng install_newpatches
+#				$nodes_files/Master.node install
+#				EOF
+#			fi
 			;;
 		${AvailNodes[1]}) #Slave
 		        slave_ip="`standmng get Slave`"
@@ -173,7 +174,9 @@ erase()
 
         case $node in
                 ${AvailNodes[0]}) #Master
-                        $nodes_files/Master.node erase
+			echo -e "\n Master erasing...\n"
+#
+#                        $nodes_files/Master.node erase
                         ;;
                 ${AvailNodes[1]}) #Slave
 

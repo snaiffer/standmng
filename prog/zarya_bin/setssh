@@ -1,0 +1,84 @@
+#!/bin/bash
+
+ip=$1
+foruser=$2
+pass=$3
+
+local_addr=$(ifconfig eth0 2> /dev/null | sed -n '2 {s/^.*inet addr:\([0-9.]*\) .*/\1/;p}')
+
+check()
+	{
+	if [ "$ip" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		return 1
+	fi
+
+	if [ "$foruser" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		return 1
+	fi
+
+	if [ "$pass" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		return 1
+	fi
+
+	return 0
+	}
+
+
+
+setssh()
+	{
+	yum list installed | grep expect &> /dev/null
+	if [ "`echo $?`" = "1" ]
+	then 
+		yum -y -q install expect
+		if [ "`echo $?`" = "1" ]
+		then 
+			echo "Error: Can't find and install package \"expect\" !"
+			exit 1
+		fi
+	fi
+
+	if [ ! -e /root/.ssh/id_rsa ]
+	then
+		expect -c "spawn ssh-keygen -t rsa
+			expect \"id_rsa): \"
+			send \"\r\"
+			expect \"phrase): \"
+			send \"\r\"
+			expect \"again: \" {send \"\r\"; exp_continue }
+			" > /dev/null
+	fi
+
+	expect -c "spawn ssh-copy-id -i $foruser@$ip
+		expect {
+			\"*(yes/no)?*\" {
+				send \"yes\r\"; exp_continue
+				expect \"assword\" {send $pass\r; exp_continue}
+				}
+			\"assword\" {send $pass\r; exp_continue}
+			}
+		" > /dev/null
+	}
+
+
+echo "$local_addr : Setting ssh connection without password to $1..."
+check
+if [ "`echo $?`" = "0" ]
+then 
+	setssh
+else
+	echo -e "
+setssh --set ssh without password (through ssh public keys)
+Usage: setssh <ip_addr> <user> <password> 
+\t<ip_addr>\t--IP address of target machine
+\t<user>\t--user for which we want to connect
+\t<password>\t--password of <user> 
+"
+fi
+

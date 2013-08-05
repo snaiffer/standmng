@@ -1,14 +1,14 @@
 ToHost:
-scp -r root@192.168.100.45:/usr/bin/zarya ./zarya_bin
-scp -r root@192.168.100.45:/usr/etc/zarya ./zarya_etc
+scp -r root@192.168.10.45:/usr/bin/zarya ./zarya_bin
+scp -r root@192.168.10.45:/usr/etc/zarya ./zarya_etc
 
 ToVM:
-ssh -T root@192.168.100.45 <<-EOF
+ssh -T root@192.168.10.45 <<-EOF
 rm -Rf /usr/bin/zarya
 rm -Rf /usr/etc/zarya
 EOF
-scp -r ./zarya_bin root@192.168.100.45:/usr/bin/zarya
-scp -r ./zarya_etc root@192.168.100.45:/usr/etc/zarya
+scp -r ./zarya_bin root@192.168.10.45:/usr/bin/zarya
+scp -r ./zarya_etc root@192.168.10.45:/usr/etc/zarya
 
 
 

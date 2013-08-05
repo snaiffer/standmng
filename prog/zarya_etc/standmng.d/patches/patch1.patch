@@ -10,8 +10,8 @@ sed -i "/#%PAM/a auth       sufficient   pam_rootok.so" /etc/pam.d/run_init
 #		EOF
 #	done
 
-echo "Installing necessary packeges..."
-yum -y -q install httpd php php-pdo expect netlabel_tools
+#echo "Installing necessary packeges..."
+#yum -y -q install httpd php php-pdo expect netlabel_tools
 #ips=(`standmng get allip`)
 #for ((i=0; i<${#ips[@]}; i++))
 #	do
