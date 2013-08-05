@@ -1,0 +1,85 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+
+export conf_file="$zarya_etc/standmng.conf"
+export local_conf_file="$zarya_etc/standmng_local.conf"
+
+source $conf_file
+source $local_conf_file
+
+###################################
+
+install()
+	{
+	$modules_files/netlabel.module install
+	$modules_files/ident.module install
+	$modules_files/balancer.module install
+	$modules_files/httpd.module install
+	$modules_files/phpPgAdmin.module install
+	$modules_files/pgpoolAdmin.module install
+	$modules_files/master_slave.module install
+	}
+
+set()
+	{
+	$modules_files/netlabel.module set $param1
+	$modules_files/ident.module set $param1
+	$modules_files/balancer.module set $param1
+	$modules_files/httpd.module set $param1
+	$modules_files/phpPgAdmin.module set $param1
+	$modules_files/pgpoolAdmin.module set $param1
+	$modules_files/master_slave.module set $param1
+	}
+
+erase()
+	{
+	$modules_files/netlabel.module erase
+	$modules_files/ident.module erase
+	$modules_files/balancer.module erase
+	$modules_files/httpd.module erase
+	$modules_files/phpPgAdmin.module erase
+	$modules_files/pgpoolAdmin.module erase
+	$modules_files/master_slave.module erase
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		set
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo -e "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+
+
+

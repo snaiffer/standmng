@@ -1,0 +1,71 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+
+install()
+	{
+	yum -y -q install httpd
+
+	iptables_mng add 80
+	}
+
+init_set()
+	{
+	local_addr=$(ifconfig eth0| sed -n '2 {s/^.*inet addr:\([0-9.]*\) .*/\1/;p}')
+
+	sed -i "s/^#ServerName www.example.com:80/ServerName $local_addr:80/" /etc/httpd/conf/httpd.conf
+
+	semanage user -m -R "auditadm_r dbadm_r staff_r secadm_r sysadm_r system_r webadm_r" root
+
+	echo "run_init /etc/init.d/httpd start" >> /etc/rc.local
+	service httpd start
+	}
+
+erase()
+	{
+	yum -y -q erase httpd
+
+	sed -i "/httpd start/d" /etc/rc.local
+
+	iptables_mng del 80
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		init_set
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo -e "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+

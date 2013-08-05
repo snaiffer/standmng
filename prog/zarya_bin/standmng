@@ -1,0 +1,491 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+param2=$3
+
+export conf_file="$zarya_etc/standmng.conf"
+export local_conf_file="$zarya_etc/standmng_local.conf"
+
+init_local_conf()
+	{
+	echo "export feed_files=\"$zarya_etc/standmng.d\"" >> $local_conf_file
+	export feed_files="$zarya_etc/standmng.d"
+
+	echo "export nodes_files=\"$feed_files/nodes\"" >> $local_conf_file
+	export nodes_files="$feed_files/nodes"
+
+	echo "export nodes_rules=\"$nodes_files/nodes.rules\"" >> $local_conf_file
+	export nodes_rules="$nodes_files/nodes.rules"
+
+	echo "export modules_files=\"$feed_files/modules\"" >> $local_conf_file
+	export modules_files="$feed_files/modules"
+
+	echo "export patches_files=\"$feed_files/patches\"" >> $local_conf_file
+	export patches_files="$feed_files/patches"
+	
+	echo "export pass=\"123456\"	#need to rework" >> $local_conf_file
+	}
+
+if [ ! -e $conf_file ]
+then
+	touch $conf_file
+fi
+source $conf_file
+
+if [ ! -e $local_conf_file ]
+then
+	touch $local_conf_file
+	init_local_conf
+fi
+source $local_conf_file
+
+local_addr=$(ifconfig eth0| sed -n '2 {s/^.*inet addr:\([0-9.]*\) .*/\1/;p}')
+
+set_sshconnect()
+	{
+	setssh $1 root $pass
+	}
+
+set_sshconnect_toall()
+	{
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		set_sshconnect ${standips[$i]}
+		done
+	}
+
+update_sshconnection_forall()
+	{
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		ssh -T root@${standips[$i]} <<-EOF
+			standmng set_ssh
+			EOF
+		done
+	}
+
+update_conf()
+	{
+	echo "Updating config's files..."
+
+	sed -i "/standnodes/d" $conf_file
+	echo "declare -x standnodes=(${standnodes[@]})" >> $conf_file
+	sed -i "/standips/d" $conf_file
+	echo "declare -x standips=(${standips[@]})" >> $conf_file
+	sed -i "/installed_patches/d" $local_conf_file
+	echo "declare -x installed_patches=(${installed_patches[@]})" >> $local_conf_file
+
+	for ((i=0; i < ${#standnodes[@]}; i++))
+		do
+		if [ "$local_addr" != "${standips[$i]}" ]
+		then
+			ssh -T ${standips[$i]} <<-EOF
+				mkdir -p $zarya_bin
+				mkdir -p $feed_files
+				
+				grep 'zarya_bin' /etc/profile &> /dev/null
+				if [ "\$?" = "1" ]
+				then
+					echo "export zarya_bin=$zarya_bin" >> /etc/profile
+					echo "export zarya_etc=$zarya_etc" >> /etc/profile
+					echo "export PATH=\"$PATH:$zarya_bin\" " >> /etc/profile
+				fi
+				EOF
+			scp -rq $zarya_bin/standmng ${standips[$i]}:$zarya_bin/
+			scp -rq $conf_file ${standips[$i]}:$conf_file
+			scp -rq $feed_files/* ${standips[$i]}:$feed_files/
+		fi
+		done
+	}
+
+get_index()
+	{
+	if [ "$1" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+	value=$1
+
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		if [[ "$value" = "${standnodes[$i]}" || "$value" = "${standips[$i]}" ]]
+		then
+			gotindex=$i
+			return
+		fi
+		done
+
+	echo "Error: Can't find \"$value\""
+	exit 1
+	}
+
+
+del()
+	{
+	echo "Deleting $1 from stand..."
+	if [ "$1" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+	value=$1
+	
+	get_index $value
+
+	for ((i=$gotindex; i<${#standnodes[@]}; i++))
+		do
+		standnodes[$i]=${standnodes[$i+1]}
+		standips[$i]=${standips[$i+1]}
+		done
+	unset standnodes[$i-1]
+	unset standips[$i-1]
+	}
+
+stand_list()
+	{
+	echo -e "\nList of machines in current stand configuration:"
+	echo -e "\t<Node>\t\t<IP address>"
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		echo -e "\t${standnodes[$i]}\t\t${standips[$i]}"
+		done
+	echo 
+	}
+
+find()
+	{
+	if [ "$1" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+	what_to_find=$1
+
+
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		if [[ "$what_to_find" = "${standnodes[$i]}" || "$what_to_find" = "${standips[$i]}" ]]
+		then
+			return 1
+		fi
+		done
+
+	return 0
+	}
+
+add()
+	{
+	echo "Adding $1 to stand..."
+
+	if [ "$1" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+
+	if [ "$2" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+	node=$param1
+	ip=$param2
+
+	find $node
+	if [ "$?" = "1" ]
+	then
+		echo "Error: This node is already exist!"
+		exit 1
+	fi
+
+	find $ip
+	if [ "$?" = "1" ]
+	then
+		echo "Error: This ip_address is already exist!"
+		exit 1
+	fi
+
+	standnodes[${#standnodes[@]}]=$node
+	standips[${#standips[@]}]=$ip
+	}
+
+CheckAlive_byPing()
+	{
+	if [ "$1" = "" ]
+	then
+		echo "Error: Input parameter isn't set!"
+		exit 1
+	fi
+	ip=$1
+
+	ping -c 2 $ip &> /dev/null
+
+	return $?
+	}
+
+CheckStandAlive()
+	{
+	retval=0
+	for ((i=0; i<${#standnodes[@]}; i++))
+		do
+		printf "Checking ${standnodes[$i]}'s machine...\t"
+		CheckAlive_byPing ${standips[$i]}
+		if [ "$?" = "0" ]
+		then
+			printf "alive\n"
+		else
+			printf "down\n"
+			retval=1
+		fi
+		done
+
+	return $retval
+	}
+
+get()
+        {
+        if [ "$1" = "" ]
+        then
+                echo "Error: Input parameter isn't set!"
+                exit 1
+        fi
+        what_to_find=$1
+
+	if [ "$what_to_find" = "allip" ]
+	then
+		echo "${standips[@]}"	
+	else
+	        for ((i=0; i<${#standnodes[@]}; i++))
+	                do
+	                if [[ "$what_to_find" = "${standnodes[$i]}" ]]
+	                then
+	                	echo "${standips[$i]}"
+				return 1
+	                fi
+	
+	                if [[ "$what_to_find" = "${standips[$i]}" ]]
+	                then
+	                	echo "${standnodes[$i]}"
+				return 1
+	                fi
+	                done
+	fi
+
+        return 0
+        }
+
+new_patches()
+	{
+	for j in $(ls $patches_files)
+		do
+		if [[ "$j" = "data" || "$j" = "feed" ]]
+		then
+			continue
+		fi
+
+		result=1
+        	for ((i=0; i<${#installed_patches[@]}; i++))
+                	do
+			if [ "${installed_patches[$i]}" = "$j" ]
+			then
+				result=0
+				break
+			fi
+			done
+		if [ "$result" = "1" ]
+		then
+			return 1
+		fi
+		done
+	return 0
+	}
+
+install_newpatches()
+	{
+	new_patches
+	if [ "$?" != "0" ]
+	then
+		echo -e "\nThere are some patches which need to install"
+		echo -e "Installing patches..."
+		CheckStandAlive
+		
+		for j in $(ls $patches_files)
+			do
+			if [[ "$j" = "data" || "$j" = "feed" ]]
+			then
+				continue
+			fi
+
+			result=1
+	        	for ((i=0; i<${#installed_patches[@]}; i++))
+	                	do
+				if [ "${installed_patches[$i]}" = "$j" ]
+				then
+					result=0
+					break
+				fi
+				done
+			if [ "$result" = "1" ]
+			then
+				echo -e "\t Installing patch \"$j\"..."
+				chmod +x $patches_files/*
+				$patches_files/$j
+				installed_patches[${#installed_patches[@]}]="$j"
+			fi
+			done
+		update_conf
+	fi
+	echo -e "All patches are installed\n"
+	}
+
+case $what_todo in
+	add)
+		if [ "$param1" = "" ]
+		then
+			echo "Error: Input parameter isn't set!"
+			exit 1
+		fi
+	
+		if [ "$param2" = "" ]
+		then
+			echo "Error: Input parameter isn't set!"
+			exit 1
+		fi
+		node=$param1
+		ip=$param2
+
+		$nodes_rules check $node
+		if [ "$?" = "0" ]
+		then
+			echo "Error: Can't find this node \"$node\""
+			exit 1
+		fi
+
+		add $node $ip
+
+		CheckStandAlive
+		if [ "$?" = "1" ]
+		then
+			echo "Error: The stand isn't alive fully"
+			standmng del $node
+			exit 1 
+		fi
+
+		set_sshconnect_toall
+
+		update_conf
+		
+		update_sshconnection_forall
+
+		$nodes_rules install $node
+	
+		echo "The new machine has been added"
+		stand_list
+		;;
+
+        del)
+                if [ "$param1" = "" ]
+                then
+                        echo "Error: Input parameter isn't set!"
+                        exit 1
+                fi
+
+                CheckStandAlive
+                if [ "$?" = "1" ]
+                then
+                        echo "Error: The stand isn't alive fully"
+                        exit 1
+                fi
+
+                find $param1
+                if [ "$?" = "0" ]
+                then
+                        echo "Error: Can't find this machine!"
+                        exit 1
+                fi
+
+		get_index $param1
+		node=standnodes[$gotindex]
+
+                ssh -T root@$ip <<-EOF
+                        $nodes_rules erase $node
+			EOF
+                if [ "$?" = "0" ]
+                then
+                        echo "Error: During execution $nodes_rules"
+                        exit 1
+                fi
+
+                del $param1
+                update_conf
+
+                echo "The machine has been deleted"
+                stand_list
+                ;;
+
+	list)
+		stand_list
+		;;
+
+	nodes)
+		$nodes_rules list
+		;;
+
+	alive)
+		CheckStandAlive
+		;;
+
+	patches)
+		case $param1 in
+			install)
+				update_conf
+
+			        for ((i=0; i<${#standnodes[@]}; i++))
+			                do
+					ssh -T root@${standips[$i]} <<-EOF
+						standmng install_newpatches
+						EOF
+					done
+				;;
+			*)
+				echo "Usage: $0 $what_todo {install}"
+				exit 1
+				;;
+		esac
+		;;
+	#set ssh connection to every machines of the stand without password
+	set_ssh)
+		set_sshconnect_toall
+		;;
+	#get ip or node name which is according to param1
+	#if param1 == "allip" output all ips of the stand 
+	get)
+		get $param1
+		;;
+	#install new patches	
+	install_newpatches)
+		install_newpatches		
+		;;
+
+	help | --help | h | -h)
+		echo -e "
+standmng --stand manager
+\tlist\t--list of machines in current stand configuration
+\tadd <node_name> <ip_addr>\t--add a new machine to stand
+\tdel <node_name OR ip_addr>\t--del the machine from stand by its <node_name> or <ip_addr>
+\tnodes\t--list of availiable nodes
+\talive\t--check alive of the stand's machine
+\tpatches\t
+\t\tinstall\t--install new patches
+"
+		;;
+	*)
+		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <node_name OR ip_addr> | nodes | alive | patches { install } }"
+		exit 1
+		;;
+esac
+
+
+

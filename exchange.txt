@@ -1,0 +1,23 @@
+ToHost:
+scp -r root@192.168.10.45:/usr/bin/zarya ./zarya_bin
+scp -r root@192.168.10.45:/usr/etc/zarya ./zarya_etc
+
+ToVM:
+ssh -T root@192.168.10.45 <<-EOF
+rm -Rf /usr/bin/zarya
+rm -Rf /usr/etc/zarya
+EOF
+scp -r ./zarya_bin root@192.168.10.45:/usr/bin/zarya
+scp -r ./zarya_etc root@192.168.10.45:/usr/etc/zarya
+
+
+
+==================
+export zarya_bin=/usr/bin/zarya
+echo "export zarya_bin=/usr/bin/zarya" >> /etc/profile
+
+export zarya_etc=/usr/etc/zarya
+echo "export zarya_etc=/usr/etc/zarya" >> /etc/profile
+
+export PATH="$PATH:$zarya_bin:$zarya_etc"
+echo "export PATH=\"$PATH:$zarya_bin:$zarya_etc\" " >> /etc/profile

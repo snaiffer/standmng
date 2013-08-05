@@ -1,0 +1,80 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+
+#require httpd.module
+
+install()
+	{
+	yum -y -q install php-pgsql phpPgAdmin
+	}
+
+set()
+	{
+	echo "Setting /etc/phpPgAdmin/config.inc.php"
+		sed -i "s/\$conf\['servers'\]\[0\]\['host'\] = '';/\$conf\['servers'\]\[0\]\['host'\] = '127.0.0.1';/" /etc/phpPgAdmin/config.inc.php
+
+	echo "Setting /etc/httpd/conf.d/phpPgAdmin.conf"
+		client_ip="`standmng get Client`"
+		if [ "$client_ip" != "" ]
+		then
+			sed -i "s/<\/Location>/Allow from $client_ip\n<\/Location>/" /etc/httpd/conf.d/phpPgAdmin.conf
+		fi
+
+	service httpd restart
+	service httpd start
+	service httpd start
+	}
+
+unset()
+	{
+	echo "Setting /etc/httpd/conf.d/phpPgAdmin.conf"
+		sed -i "/$param1/d" /etc/httpd/conf.d/phpPgAdmin.conf
+
+	service httpd restart
+	service httpd start
+	service httpd start
+	}
+
+erase()
+	{
+	yum -y -q erase php-pgsql phpPgAdmin
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		set
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		set
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+
+		unset
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo -e "Usage: $0 { install | set | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+

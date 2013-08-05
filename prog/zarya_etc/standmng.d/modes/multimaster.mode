@@ -1,0 +1,167 @@
+#!/bin/bash
+
+#tset
+master_ip="192.168.10.45"
+slave_ip="192.168.10.46"
+balancer_ip="192.168.10.47"
+root_pass="123456"
+postgres_pass="123456"
+net_adapter="eth0"
+#
+
+MY_DIR=`dirname $0`
+
+if [ "$master_ip" = "" ]
+then
+	echo "Input IP address of Master:"
+	read master_ip
+fi
+
+if [ "$slave_ip" = "" ]
+then
+	echo "Input IP address of Slave:"
+	read slave_ip
+fi
+
+if [ "$balancer_ip" = "" ]
+then
+	echo "Input IP address of Balancer:"
+	read balancer_ip
+fi
+
+if [ "$root_pass" = "" ]
+then
+	echo "Input password for root:"
+	read root_pass
+fi
+
+if [ "$postgres_pass" = "" ]
+then
+	echo "Input password for postgres:"
+	read postgres_pass
+fi
+
+if [ "$net_adapter" = "" ]
+then
+	echo "Input name of your network adapter (for example \"eth0\"):"
+	read net_adapter
+fi
+
+echo -e "Setting ssh connection..."
+	setssh $master_ip postgres $postgres_pass
+	ssh -T postgres@$master_ip <<-EOF
+		setssh $slave_ip postgres $postgres_pass
+		setssh $balancer_ip postgres $postgres_pass
+		EOF
+	
+	setssh $slave_ip postgres $postgres_pass
+	ssh -T postgres@$slave_ip <<-EOF
+		setssh $master_ip postgres $postgres_pass
+		setssh $balancer_ip postgres $postgres_pass
+		EOF
+	
+	setssh $balancer_ip postgres $postgres_pass
+	ssh -T postgres@$balancer_ip <<-EOF
+		setssh $master_ip postgres $postgres_pass
+		ssh -T postgres@$master_ip <<-EOF1
+			setssh $slave_ip postgres $postgres_pass
+			EOF1
+	
+		setssh $slave_ip postgres $postgres_pass
+		ssh -T postgres@$slave_ip <<-EOF1
+			setssh $master_ip postgres $postgres_pass
+			EOF1
+		EOF
+	
+	setssh $balancer_ip root $root_pass
+	ssh -T root@$balancer_ip <<-EOF
+		setssh $master_ip root $root_pass
+		setssh $slave_ip root $root_pass
+
+		setssh $master_ip postgres $postgres_pass
+		setssh $slave_ip postgres $postgres_pass
+		EOF
+
+
+set_server()
+	{
+	ip=$1
+
+	ssh -T root@$ip "rm -f /var/lib/pgsql/data/recovery.conf"
+
+	ssh -T root@$balancer_ip <<-EOF
+		echo "Loading pgpool-recovery..."
+			scp /usr/share/pgpool-II/pgpool-recovery.so root@$ip:/usr/lib64/pgsql/
+			scp /usr/share/pgpool-II/pgpool-recovery.sql root@$ip:/usr/share/pgsql/
+		EOF
+
+	echo "Loading pgpool_recovery and pgpool_remote_start..."
+		scp $MY_DIR/data/pgpool_recovery postgres@$ip:/var/lib/pgsql/data/
+		scp $MY_DIR/data/pgpool_remote_start postgres@$ip:/var/lib/pgsql/data/
+	
+	ssh -T root@$ip <<-EOF
+		chmod 755 /var/lib/pgsql/data/pgpool_recovery
+		chmod 755 /var/lib/pgsql/data/pgpool_remote_start
+
+		echo "Setting postgresql.conf"
+			sed -i "s/^hot_standby = on/#hot_standby = on/" /var/lib/pgsql/data/postgresql.conf
+
+		echo "Setting pg_hba.conf"
+			echo "host    replication     postgres        $master_ip/32           trust
+host    replication     postgres        $slave_ip/32           trust" >> /var/lib/pgsql/data/pg_hba.conf
+
+		service postgresql restart
+		EOF
+
+	ssh -T postgres@$ip <<-EOF
+		psql -f /usr/share/pgsql/pgpool-recovery.sql template1
+		EOF
+	}
+
+echo -e "Additional settings for Server_1"
+	set_server $master_ip
+
+echo -e "Additional settings for Server_2"
+	set_server $slave_ip
+
+echo -e "Additional settings for Balancer"
+	ssh -T root@$balancer_ip <<-EOF
+		echo "Setting pgpool.conf"
+			sed -i "s/replication_mode =.*/replication_mode = true/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/load_balance_mode =.*/load_balance_mode = true/" /etc/pgpool-II/pgpool.conf
+
+			sed -i "s/recovery_user =.*/recovery_user = 'postgres'/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/recovery_password =.*/recovery_password = '$postgres_pass'/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/recovery_1st_stage_command =.*/recovery_1st_stage_command = 'pgpool_recovery'/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/recovery_2nd_stage_command =.*/recovery_2nd_stage_command = 'pgpool_recovery'/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/recovery_timeout =.*/recovery_timeout = 90/" /etc/pgpool-II/pgpool.conf
+
+			sed -i "s/master_slave_mode =.*/master_slave_mode = false/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/master_slave_sub_mode =.*/master_slave_sub_mode = 'stream'/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/failover_command =.*/failover_command = ''/" /etc/pgpool-II/pgpool.conf
+
+			sed -i "s/health_check_timeout =.*/health_check_timeout = 20/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/health_check_period =.*/health_check_period = 15/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/health_check_user =.*/health_check_user = 'postgres'/" /etc/pgpool-II/pgpool.conf
+			
+		pgpool -m fast stop
+		EOF
+	
+echo -e "Replication..."
+	ssh -T root@$slave_ip "service postgresql stop"
+
+	ssh -T postgres@$master_ip <<-EOF
+		psql -c "SELECT pg_start_backup('stream');"
+		rsync -a /var/lib/pgsql/data/ postgres@$slave_ip:/var/lib/pgsql/data/ --exclude postmaster.pid --exclude postmaster.opts
+ 		psql -c "SELECT pg_stop_backup();"
+		EOF
+
+	ssh -T root@$slave_ip "service postgresql start"
+
+	ssh -T root@$balancer_ip "service pgpool start"
+
+
+
+
+
+

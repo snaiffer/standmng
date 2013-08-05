@@ -1,0 +1,189 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+#require ident.module
+
+
+change_passwd()
+	{
+	user=$1
+	pass=$2
+
+	echo "Setting password for user: \"$user\""
+	passwd $user &> /dev/null <<-EOF
+		$pass
+		$pass
+		EOF
+	}
+
+create_psql_user()
+	{
+	user=$1
+	pass=$2
+	admin=$3 #"y" or "n"
+
+	echo "Creating new psql user: \"$user\""
+	if [ "$admin" = "y" ]
+	then
+		expect -c "
+			spawn su -l postgres -c \"createuser -s -P $user\"
+				expect \"node: \"
+				send \"$pass\r\"
+				expect \"again: \"
+				send \"$pass\r\"
+				sleep 1
+			" > /dev/null
+	else
+		expect -c "
+			spawn su -l postgres -c \"createuser -S -P $user\"
+				expect \"node: \"
+				send \"$pass\r\"
+				expect \"again: \"
+				send \"$pass\r\"
+				expect \"n) \" {send \"n\r\"}
+				expect \"n) \" {send \"n\r\"}
+				sleep 1
+			" > /dev/null
+	fi
+	}
+
+root_pass=123456
+postgres_pass=123456
+user1_pass=123456
+user2_pass=123456
+user3_pass=123456
+sepgsql_pass=123456
+###################################
+
+install()
+	{
+	yum -y -q install postgresql-libs postgresql postgresql-server postgresql-test postgresql-contrib
+	}
+
+init_set()
+	{
+	service postgresql initdb
+	change_passwd postgres $postgres_pass
+
+	run_init /etc/init.d/postgresql start
+
+	echo "Creating users..."
+		adduser user1 
+		adduser user2 
+		adduser user3 
+		adduser -Z dbadm_u sepgsql 
+		usermod -aG wheel sepgsql 
+
+		change_passwd user1 $user1_pass
+		change_passwd user2 $user2_pass
+		change_passwd user3 $user3_pass
+		change_passwd sepgsql $sepgsql_pass
+
+
+	echo "Creating PostgreSQL users..."
+		create_psql_user user1 $user1_pass n
+		create_psql_user user2 $user2_pass n
+		create_psql_user user3 $user3_pass n
+		create_psql_user sepgsql $sepgsql_pass y
+		create_psql_user repl $repl_pass y
+
+
+	echo "Setting selinux context for users..."
+		semanage user -m -r s0-s3 user_u 
+		semanage login -a -s user_u -r s3 user1 
+		semanage login -a -s user_u -r s2 user2 
+		semanage login -a -s user_u -r s0 user3 
+		semanage login -m -r s0-s3 sepgsql 
+		chcon -R -l 's3' /home/user1 
+		chcon -R -l 's2' /home/user2 
+		chcon -R -l 's0' /home/user3 
+		chcon -R -l 's0' /home/sepgsql
+
+	iptables_mng add 5432
+
+	echo "Setting DB for remote access /var/lib/pgsql/data/pg_hba.conf"
+		echo "listen_addresses = '*'" >> /var/lib/pgsql/data/postgresql.conf
+
+		for i in 1 2 3 4 5; do sed -i '$d' /var/lib/pgsql/data/pg_hba.conf; done
+
+		echo "local    all             all                                       trust" >> /var/lib/pgsql/data/pg_hba.conf
+		echo "# IPv4 local connections:" >> /var/lib/pgsql/data/pg_hba.conf
+		echo "host    all             all             127.0.0.1/32               trust" >> /var/lib/pgsql/data/pg_hba.conf
+		echo "# IPv6 local connections:" >> /var/lib/pgsql/data/pg_hba.conf
+		echo "host    all             all             ::1/128                    trust" >> /var/lib/pgsql/data/pg_hba.conf
+		echo -e "\n" >> /var/lib/pgsql/data/pg_hba.conf
+
+	ips=(`standmng get allip`)
+	for ((i=0; i<${#ips[@]}; i++))
+		do
+		netlbl add ${ips[$i]}
+		echo -e "host    all             all             ${ips[$i]}/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
+		done
+
+	run_init /etc/init.d/postgresql restart
+
+	su -l sepgsql -c 'psql -d postgres -f /usr/lib64/pgsql/test/regress/scriptsforsectest/testdb.sql > /dev/null'
+	}
+
+set()
+	{
+	echo -e "host    all             all             $param1/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
+	run_init /etc/init.d/postgresql restart
+	}
+
+unset()
+	{
+	sed -i "/$param1/d" /var/lib/pgsql/data/pg_hba.conf
+	run_init /etc/init.d/postgresql restart
+	}
+
+erase()
+	{
+	iptables_mng del 5432
+
+	yum -y -q erase postgresql-libs postgresql postgresql-server postgresql-test postgresql-contrib
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		init_set
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+
+		set
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+
+		unset
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo -e "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+

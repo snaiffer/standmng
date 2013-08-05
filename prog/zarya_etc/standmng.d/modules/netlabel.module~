@@ -1,0 +1,75 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+
+
+install()
+	{
+	yum -y -q install netlabel_tools
+	}
+
+init_set()
+	{
+	netlbl on
+
+	ips=(`standmng get allip`)
+	for ((i=0; i<${#ips[@]}; i++))
+		do
+		netlbl add ${ips[$i]}
+		done
+	}
+
+set()
+	{
+	netlbl add $param1
+	}
+
+#unset()
+#	{
+	# netlbl del $param1
+#	}
+
+erase()
+	{
+	yum -y -q erase netlabel_tools
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		init_set
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo "Error: Input parameter isn't set!"
+			exit 1
+		fi
+
+		set
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo "Error: Input parameter isn't set!"
+			exit 1
+		fi
+
+		#unset
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		;;
+	*)
+		echo "Usage: $0 {install|set <ip_addr>|unset <ip_addr>|erase}"
+		exit 1
+		;;
+esac
+

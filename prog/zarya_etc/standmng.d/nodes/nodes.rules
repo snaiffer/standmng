@@ -1,0 +1,226 @@
+#!/bin/bash
+
+declare -x AvailNodes=(Master Slave Balancer Client)
+
+if [ "$1" = "" ]
+        then
+                echo "Error: Input parameter isn't set!"
+                exit 1
+        fi
+
+what_todo=$1
+param1=$2
+
+export conf_file="$zarya_etc/standmng.conf"
+export local_conf_file="$zarya_etc/standmng_local.conf"
+
+source $conf_file
+source $local_conf_file
+
+AvailNodes_list()
+	{
+	echo -e "\nList of availiable nodes for stand machines:"
+	for ((i=0; i<${#AvailNodes[@]}; i++))
+		do
+		echo -e "\t${AvailNodes[$i]}"
+		done
+	echo
+	}
+
+check()
+	{
+	if [ "$1" = "" ]
+        then
+                echo "Error: Input parameter isn't set!"
+                exit 1
+        fi
+	local node=$1
+
+	for ((i=0; i < ${#AvailNodes[@]}; i++))
+		do
+		if [ "$node" = "${AvailNodes[$i]}" ]
+		then
+			return 1
+		fi
+		done
+	return 0
+	}
+
+install()
+	{
+	if [ "$param1" = "" ]
+        	then
+                	echo "Error: Input parameter isn't set!"
+	                exit 1
+        	fi
+	local node=$param1
+
+	case $node in
+		${AvailNodes[0]}) #Master
+		        master_ip="`standmng get Master`"
+			if [ "$master_ip" != "" ]
+			then
+	                ssh -T root@$master_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Master.node install
+				EOF
+			fi
+			;;
+		${AvailNodes[1]}) #Slave
+		        slave_ip="`standmng get Slave`"
+			if [ "$slave_ip" != "" ]
+			then
+	                ssh -T root@$slave_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Slave.node install
+				EOF
+			fi
+
+		        master_ip="`standmng get Master`"
+			if [ "$master_ip" != "" ]
+			then
+	                ssh -T root@$master_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Master.node set $slave_ip
+				EOF
+			fi
+			;;
+		${AvailNodes[2]}) #Balancer
+		        balancer_ip="`standmng get Balancer`"
+			if [ "$balancer_ip" != "" ]
+			then
+	                ssh -T root@$balancer_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Balancer.node install
+				EOF
+			fi
+
+		        master_ip="`standmng get Master`"
+			if [ "$master_ip" != "" ]
+			then
+	                ssh -T root@$master_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Master.node set $balancer_ip
+				EOF
+			fi
+
+		        slave_ip="`standmng get Slave`"
+			if [ "$slave_ip" != "" ]
+			then
+	                ssh -T root@$slave_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Slave.node set $balancer_ip
+				EOF
+			fi
+			;;
+		${AvailNodes[3]}) #Client
+		        client_ip="`standmng get Client`"
+			if [ "$client_ip" != "" ]
+			then
+	                ssh -T root@$client_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Client.node install
+				EOF
+			fi
+
+		        master_ip="`standmng get Master`"
+			if [ "$master_ip" != "" ]
+			then
+	                ssh -T root@$master_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Master.node set $client_ip
+				EOF
+			fi
+
+		        slave_ip="`standmng get Slave`"
+			if [ "$slave_ip" != "" ]
+			then
+	                ssh -T root@$slave_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Slave.node set $client_ip
+				EOF
+			fi
+	
+		        balancer_ip="`standmng get Balancer`"
+			if [ "$balancer_ip" != "" ]
+			then
+	                ssh -T root@$balancer_ip <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/Balancer.node set $client_ip
+				EOF
+			fi
+			;;
+		list)
+			AvailNodes_list
+			;;
+		*)
+			echo "Error: Can't find such node \"$node\""
+			AvailNodes_list
+			exit 1
+			;;
+	esac
+
+	}
+
+erase()
+        {
+        if [ "$param1" = "" ]
+                then
+                        echo "Error: Input parameter isn't set!"
+                        exit 1
+                fi
+        local node=$param1
+
+        case $node in
+                ${AvailNodes[0]}) #Master
+                        $nodes_files/Master.node erase
+                        ;;
+                ${AvailNodes[1]}) #Slave
+
+                        ;;
+                ${AvailNodes[2]}) #Balancer
+                        echo "BALANCER!!!!!!!!!!!!!"
+
+                        ;;
+                ${AvailNodes[3]}) #Client
+
+                        ;;
+                list)
+                        AvailNodes_list
+                        ;;
+                *)
+                        echo "Error: Can't find such node \"$node\""
+                        AvailNodes_list
+                        exit 1
+                        ;;
+        esac
+        }
+
+case $what_todo in
+	install)
+		install $param1	
+		;;
+	erase)
+		erase $param1	
+		;;
+	check)
+		check $param1
+		;;
+	list)
+		AvailNodes_list
+		;;
+	help | --help | h | -h)
+		echo -e "
+nodes.rules --rules for nodes
+\tlist\t--list of avaliable nodes
+\tcheck\t--check if such node exist
+\tinstall\t--install node on current machine
+\terase\t--unset the node from current machine
+"
+		;;
+	*)
+		echo "Usage: nodes.rules { install <node> | erase <node> | check | list }"
+		exit 1
+		;;
+esac
+

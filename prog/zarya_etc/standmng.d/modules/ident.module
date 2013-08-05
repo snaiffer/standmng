@@ -1,0 +1,72 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+
+install()
+	{
+	yum -y -q install authd
+
+	iptables_mng add 113
+	}
+
+init_set()
+	{
+	echo "Setting /etc/xinetd.d/auth"
+	sed -i '/disable/d' /etc/xinetd.d/auth
+	sed -i '/server_args/d' /etc/xinetd.d/auth
+	sed -i '/}/d' /etc/xinetd.d/auth
+
+	echo "" >> /etc/xinetd.d/auth
+	echo "disable = no" >> /etc/xinetd.d/auth
+	echo "server_args = -t60 --xerror --os" >> /etc/xinetd.d/auth
+	echo "}" >> /etc/xinetd.d/auth
+
+	service xinetd start
+	}
+
+erase()
+	{
+	yum -y -q erase authd
+
+	iptables_mng del 113
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		init_set
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+

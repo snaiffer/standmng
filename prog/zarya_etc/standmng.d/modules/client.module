@@ -1,0 +1,112 @@
+#!/bin/bash
+
+what_todo=$1
+param1=$2
+###################################
+#require 
+
+
+change_passwd()
+	{
+	user=$1
+	pass=$2
+
+	echo "Setting password for user: \"$user\""
+	passwd $user &> /dev/null <<-EOF
+		$pass
+		$pass
+		EOF
+	}
+
+root_pass=123456
+postgres_pass=123456
+user1_pass=123456
+user2_pass=123456
+user3_pass=123456
+sepgsql_pass=123456
+###################################
+
+install()
+	{
+	yum -y -q install postgresql-libs postgresql
+	}
+
+init_set()
+	{
+	echo "Setting selinux context for users..."
+		semanage user -m -r s0-s3 user_u 
+		semanage user -a -R dbadm_r -r s0-s3:c0.c1023 dbadm_u
+
+	echo "Creating users..."
+		adduser user1 
+		adduser user2 
+		adduser user3 
+		adduser -Z dbadm_u sepgsql 
+		usermod -aG wheel sepgsql 
+
+		change_passwd user1 $user1_pass
+		change_passwd user2 $user2_pass
+		change_passwd user3 $user3_pass
+		change_passwd sepgsql $sepgsql_pass
+		change_passwd postgresql $postgres_pass
+
+	echo "Setting selinux context for users..."
+		semanage user -m -r s0-s3 user_u 
+		semanage login -a -s user_u -r s3 user1 
+		semanage login -a -s user_u -r s2 user2 
+		semanage login -a -s user_u -r s0 user3 
+		semanage login -m -r s0-s3 sepgsql 
+		chcon -R -l 's3' /home/user1 
+		chcon -R -l 's2' /home/user2 
+		chcon -R -l 's0' /home/user3 
+		chcon -R -l 's0' /home/sepgsql
+	}
+
+erase()
+	{
+	yum -y -q erase postgresql-libs postgresql
+
+	sed -i "/postgresql start/d" /etc/rc.local
+
+	iptables_mng del 5432
+	}
+
+###################################
+case $what_todo in
+	install)
+		echo "Installing $0..."
+		install
+		init_set
+		echo
+		;;
+	set)
+		echo "Setting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+
+		echo
+		;;
+	unset)
+		echo "Unsetting $0..."
+		if [ "$param1" = "" ]
+		then
+			echo -e "Error: Input parameter isn't set!\n"
+			exit 1
+		fi
+
+		echo
+		;;
+	erase)
+		echo "Erasing $0..."
+		erase
+		echo
+		;;
+	*)
+		echo -e "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+		exit 1
+		;;
+esac
+

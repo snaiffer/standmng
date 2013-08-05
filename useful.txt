@@ -1,0 +1,14 @@
+        client_ip="`standmng get Client`"
+        if [ "$client_ip" != "" ]
+        then
+		$client_ip
+        fi
+
+===========================================
+
+        ips=(`standmng get allip`)
+        for ((i=0; i<${#ips[@]}; i++))
+                do
+                ${ips[$i]}
+                done
+
