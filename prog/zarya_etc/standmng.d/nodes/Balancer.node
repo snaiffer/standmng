@@ -19,7 +19,6 @@ install()
 	$modules_files/httpd.module install
 	$modules_files/phpPgAdmin.module install
 	$modules_files/pgpoolAdmin.module install
-	$modules_files/master_slave.module install
 	}
 
 set()
@@ -30,7 +29,6 @@ set()
 	$modules_files/httpd.module set $param1
 	$modules_files/phpPgAdmin.module set $param1
 	$modules_files/pgpoolAdmin.module set $param1
-	$modules_files/master_slave.module set $param1
 	}
 
 erase()
@@ -41,7 +39,6 @@ erase()
 	$modules_files/httpd.module erase
 	$modules_files/phpPgAdmin.module erase
 	$modules_files/pgpoolAdmin.module erase
-	$modules_files/master_slave.module erase
 	}
 
 ###################################

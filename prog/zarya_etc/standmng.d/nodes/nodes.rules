@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -x AvailNodes=(Master Slave Balancer Client)
+declare -x AvailNodes=(Server Balancer Client)
 
 if [ "$1" = "" ]
         then
@@ -16,6 +16,52 @@ export local_conf_file="$zarya_etc/standmng_local.conf"
 
 source $conf_file
 source $local_conf_file
+
+# to "install" or "erase"
+# run appropriate script on <new_ip>
+# and do settings for this machine on another machines of the stand
+to()
+	{
+	action=$1
+	new_ip=$2
+
+	case $action in
+		install)
+			action2="set"
+			;;
+		erase)
+			action2="unset"
+			;;
+		*)
+			echo "Error: Input parameter isn't set or set incorrect!"
+			;;
+	esac
+			
+        if [ "$new_ip" = "" ]
+        then
+                echo "Error: Input parameter isn't set!"
+                exit 1
+        fi
+	
+	ssh -T root@$new_ip <<-EOF
+        	standmng install_newpatches
+		$nodes_files/`standmng get $new_ip`.node $action
+		EOF
+
+        ips=(`standmng get allip`)
+        for ((i=0; i<${#ips[@]}; i++))
+                do
+		if [[ "${ips[$i]}" != "$new_ip" && "${ips[$i]}" != "" ]]
+		then
+			echo -e "\n\tSetting $new_ip on ${ips[$i]}"
+	                ssh -T root@${ips[$i]} <<-EOF
+        	                standmng install_newpatches
+				$nodes_files/`standmng get ${ips[$i]}`.node $action2 $new_ip
+				EOF
+		fi
+                done
+	}
+
 
 AvailNodes_list()
 	{
@@ -53,103 +99,18 @@ install()
                 	echo "Error: Input parameter isn't set!"
 	                exit 1
         	fi
-	local node=$param1
+        local ip=$param1
+        local node=`standmng get $ip`
 
 	case $node in
-		${AvailNodes[0]}) #Master
-			echo -e "Master installing... \n"
-#		        master_ip="`standmng get Master`"
-#			if [ "$master_ip" != "" ]
-#			then
-#	                ssh -T root@$master_ip <<-EOF
-#        	                standmng install_newpatches
-#				$nodes_files/Master.node install
-#				EOF
-#			fi
+		${AvailNodes[0]}) #Server
+			to install $ip
 			;;
-		${AvailNodes[1]}) #Slave
-		        slave_ip="`standmng get Slave`"
-			if [ "$slave_ip" != "" ]
-			then
-	                ssh -T root@$slave_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Slave.node install
-				EOF
-			fi
-
-		        master_ip="`standmng get Master`"
-			if [ "$master_ip" != "" ]
-			then
-	                ssh -T root@$master_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Master.node set $slave_ip
-				EOF
-			fi
+		${AvailNodes[1]}) #Balancer
+			to install $ip
 			;;
-		${AvailNodes[2]}) #Balancer
-		        balancer_ip="`standmng get Balancer`"
-			if [ "$balancer_ip" != "" ]
-			then
-	                ssh -T root@$balancer_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Balancer.node install
-				EOF
-			fi
-
-		        master_ip="`standmng get Master`"
-			if [ "$master_ip" != "" ]
-			then
-	                ssh -T root@$master_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Master.node set $balancer_ip
-				EOF
-			fi
-
-		        slave_ip="`standmng get Slave`"
-			if [ "$slave_ip" != "" ]
-			then
-	                ssh -T root@$slave_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Slave.node set $balancer_ip
-				EOF
-			fi
-			;;
-		${AvailNodes[3]}) #Client
-		        client_ip="`standmng get Client`"
-			if [ "$client_ip" != "" ]
-			then
-	                ssh -T root@$client_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Client.node install
-				EOF
-			fi
-
-		        master_ip="`standmng get Master`"
-			if [ "$master_ip" != "" ]
-			then
-	                ssh -T root@$master_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Master.node set $client_ip
-				EOF
-			fi
-
-		        slave_ip="`standmng get Slave`"
-			if [ "$slave_ip" != "" ]
-			then
-	                ssh -T root@$slave_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Slave.node set $client_ip
-				EOF
-			fi
-	
-		        balancer_ip="`standmng get Balancer`"
-			if [ "$balancer_ip" != "" ]
-			then
-	                ssh -T root@$balancer_ip <<-EOF
-        	                standmng install_newpatches
-				$nodes_files/Balancer.node set $client_ip
-				EOF
-			fi
+		${AvailNodes[2]}) #Client
+			to install $ip
 			;;
 		list)
 			AvailNodes_list
@@ -170,23 +131,18 @@ erase()
                         echo "Error: Input parameter isn't set!"
                         exit 1
                 fi
-        local node=$param1
+        local ip=$param1
+        local node=`standmng get $ip`
 
         case $node in
-                ${AvailNodes[0]}) #Master
-			echo -e "\n Master erasing...\n"
-#
-#                        $nodes_files/Master.node erase
+                ${AvailNodes[0]}) #Server
+			to erase $ip
                         ;;
-                ${AvailNodes[1]}) #Slave
-
+                ${AvailNodes[1]}) #Balancer
+			to erase $ip
                         ;;
-                ${AvailNodes[2]}) #Balancer
-                        echo "BALANCER!!!!!!!!!!!!!"
-
-                        ;;
-                ${AvailNodes[3]}) #Client
-
+                ${AvailNodes[2]}) #Client
+			to erase $ip
                         ;;
                 list)
                         AvailNodes_list

@@ -2,8 +2,10 @@
 
 what_todo=$1
 param1=$2
+
+temp_file="/tmp-noinst/balancer.temp"
 ###################################
-# require to be installed Master and Slave
+# require to be installed Server
 
 change_passwd()
 	{
@@ -65,32 +67,25 @@ init_set()
 	iptables_mng add 9999
 
 	echo "Setting pgpool.conf..."
-	        master_ip="`standmng get Master`"
-		        if [ "$master_ip" = "" ]
-		        then
-				echo "Error: Can't find IP address for Master. May me it isn't installed!"
-				exit 1
-		        fi
-
-	        slave_ip="`standmng get Slave`"
-		        if [ "$slave_ip" = "" ]
-		        then
-				echo "Error: Can't find IP address for Slave. May me it isn't installed!"
-				exit 1
-		        fi
-
 		sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_hostname0 = 'localhost'/backend_hostname0 = '$slave_ip'/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_port0 = 5432/backend_port0 = 5432/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_weight0 = 1/backend_weight0 = 1/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_data_directory0 = '\/var\/lib\/pgsql\/data'/backend_data_directory0 = '\/var\/lib\/pgsql\/data'/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_hostname1 = 'host2'/backend_hostname1 = '$master_ip'/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_port1 = 5433/backend_port1 = 5432/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_weight1 = 1/backend_weight1 = 1/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/#backend_data_directory1 = '\/data1'/backend_data_directory1 = '\/var\/lib\/pgsql\/data'/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/replication_mode = false/replication_mode = true/" /etc/pgpool-II/pgpool.conf
-		sed -i "s/load_balance_mode = false/load_balance_mode = true/" /etc/pgpool-II/pgpool.conf
 		sed -i "s/enable_pool_hba = false/enable_pool_hba = true/" /etc/pgpool-II/pgpool.conf
+
+	        server_ips=(`standmng get Server`)
+		        if [ "$server_ips" = "" ]
+		        then
+				echo "Error: Can't find IP address for Server. May me it isn't installed!"
+				exit 1
+		        fi
+		rm -Rf $temp_file &> /dev/null
+	        for ((i=0; i<${#server_ips[@]}; i++))
+	                do
+			echo "backend_hostname$i = '${server_ips[$i]}'" >> $temp_file
+			echo "backend_port$i = 5432" >> $temp_file
+			echo "backend_weight$i = 1" >> $temp_file
+			echo "backend_data_directory$i = '/var/lib/pgsql/data'" >> $temp_file
+	                done
+		sed -i "/#backend_data_directory1 = '\/data1'/r $temp_file" /etc/pgpool-II/pgpool.conf
+		rm -Rf $temp_file &> /dev/null
 
 	echo "Setting pcp.conf..."
 		echo "user1:`pg_md5 $user1_pass`" >> /etc/pgpool-II/pcp.conf

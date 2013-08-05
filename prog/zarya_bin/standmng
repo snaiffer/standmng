@@ -259,8 +259,7 @@ get()
 	                do
 	                if [[ "$what_to_find" = "${standnodes[$i]}" ]]
 	                then
-	                	echo "${standips[$i]}"
-				return 1
+	                	printf "${standips[$i]} "
 	                fi
 	
 	                if [[ "$what_to_find" = "${standips[$i]}" ]]
@@ -388,7 +387,7 @@ case $what_todo in
 		
 		update_sshconnection_forall
 
-		$nodes_rules install $node
+		$nodes_rules install $ip
                 if [ "$?" != "0" ]
                 then
                         echo "Error: During execution $nodes_rules"
@@ -425,7 +424,7 @@ case $what_todo in
 		node=${standnodes[$gotindex]}
 
                 ssh -T root@$ip <<-EOF
-                        $nodes_rules erase $node
+                        $nodes_rules erase $ip
 			EOF
                 if [ "$?" != "0" ]
                 then

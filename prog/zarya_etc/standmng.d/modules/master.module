@@ -18,6 +18,39 @@ change_passwd()
 		EOF
 	}
 
+# ENG version
+# create_psql_user()
+# 	{
+# 	user=$1
+# 	pass=$2
+# 	admin=$3 #"y" or "n"
+# 
+# 	echo "Creating new psql user: \"$user\""
+# 	if [ "$admin" = "y" ]
+# 	then
+# 		expect -c "
+# 			spawn su -l postgres -c \"createuser -s -P $user\"
+# 				expect \"node: \"
+# 				send \"$pass\r\"
+# 				expect \"again: \"
+# 				send \"$pass\r\"
+# 				sleep 1
+# 			" > /dev/null
+# 	else
+# 		expect -c "
+# 			spawn su -l postgres -c \"createuser -S -P $user\"
+# 				expect \"node: \"
+# 				send \"$pass\r\"
+# 				expect \"again: \"
+# 				send \"$pass\r\"
+# 				expect \"n) \" {send \"n\r\"}
+# 				expect \"n) \" {send \"n\r\"}
+# 				sleep 1
+# 			" > /dev/null
+# 	fi
+# 	}
+
+# RUS version
 create_psql_user()
 	{
 	user=$1
@@ -29,23 +62,25 @@ create_psql_user()
 	then
 		expect -c "
 			spawn su -l postgres -c \"createuser -s -P $user\"
-				expect \"node: \"
+				expect \"новой роли: \"
 				send \"$pass\r\"
-				expect \"again: \"
+				expect \"торите его: \"
 				send \"$pass\r\"
 				sleep 1
 			" > /dev/null
+
 	else
 		expect -c "
 			spawn su -l postgres -c \"createuser -S -P $user\"
-				expect \"node: \"
+				expect \"новой роли: \"
 				send \"$pass\r\"
-				expect \"again: \"
+				expect \"торите его: \"
 				send \"$pass\r\"
-				expect \"n) \" {send \"n\r\"}
-				expect \"n) \" {send \"n\r\"}
+				expect \" - нет) \" {send \"n\r\"}
+				expect \" - нет) \" {send \"n\r\"}
 				sleep 1
 			" > /dev/null
+
 	fi
 	}
 
