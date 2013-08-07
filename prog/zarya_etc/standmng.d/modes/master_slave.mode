@@ -1,119 +1,119 @@
 #!/bin/bash
 
-#tset
-master_ip="192.168.10.45"
-slave_ip="192.168.10.46"
-balancer_ip="192.168.10.47"
-root_pass="123456"
-postgres_pass="123456"
-net_adapter="eth0"
-#
+what_todo=$1
+param1=$2
+
+export conf_file="$zarya_etc/standmng.conf"
+export local_conf_file="$zarya_etc/standmng_local.conf"
+
+source $conf_file
+source $local_conf_file
+
+###################################
 
 MY_DIR=`dirname $0`
-
-if [ "$master_ip" = "" ]
-then
-	echo "Input IP address of Master:"
-	read master_ip
-fi
-
-if [ "$slave_ip" = "" ]
-then
-	echo "Input IP address of Slave:"
-	read slave_ip
-fi
-
+server_ips=(`standmng get Server`)
+balancer_ip="`standmng get Balancer`"
 if [ "$balancer_ip" = "" ]
 then
-	echo "Input IP address of Balancer:"
-	read balancer_ip
+	echo "Error: Balancer isn't found"
+	exit 1
 fi
+slave_ips=${server_ips[@]}
+slave_ips=( `echo ${slave_ips[@]//$master_ip/}` )
 
-if [ "$root_pass" = "" ]
-then
-	echo "Input password for root:"
-	read root_pass
-fi
 
-if [ "$postgres_pass" = "" ]
-then
-	echo "Input password for postgres:"
-	read postgres_pass
-fi
-
-if [ "$net_adapter" = "" ]
-then
-	echo "Input name of your network adapter (for example \"eth0\"):"
-	read net_adapter
-fi
-
-echo -e "Setting ssh connection..."
-	setssh $master_ip postgres $postgres_pass
-	ssh -T postgres@$master_ip <<-EOF
-		setssh $slave_ip postgres $postgres_pass
-		setssh $balancer_ip postgres $postgres_pass
-		EOF
-	
-	setssh $slave_ip postgres $postgres_pass
-	ssh -T postgres@$slave_ip <<-EOF
-		setssh $master_ip postgres $postgres_pass
-		setssh $balancer_ip postgres $postgres_pass
-		EOF
+install()
+	{
+	echo -e "Setting ssh connection..."
+        for ((i=0; i<${#server_ips[@]}; i++))
+                do
+                setssh ${server_ips[$i]} postgres $postgres_pass
+		ssh -T postgres@${server_ips[$i]} <<-EOF
+			server_ips=(${server_ips[@]})
+        		for ((j=0; j<${#server_ips[@]}; j++))
+		                do
+				setssh \${server_ips[\$j]} postgres $postgres_pass
+				done	
+			setssh $balancer_ip postgres $postgres_pass
+			EOF
+                done
 	
 	setssh $balancer_ip postgres $postgres_pass
 	ssh -T postgres@$balancer_ip <<-EOF
-		setssh $master_ip postgres $postgres_pass
-		ssh -T postgres@$master_ip <<-EOF1
-			setssh $slave_ip postgres $postgres_pass
-			EOF1
-	
-		setssh $slave_ip postgres $postgres_pass
-		ssh -T postgres@$slave_ip <<-EOF1
-			setssh $master_ip postgres $postgres_pass
-			EOF1
+		server_ips=(${server_ips[@]})
+	        for ((i=0; i<${#server_ips[@]}; i++))
+	                do
+	                setssh \${server_ips[\$i]} postgres $postgres_pass
+        		for ((j=0; j<${#server_ips[@]}; j++))
+		                do
+				tempip="\${server_ips[\$j]}"
+				ssh -T postgres@\${server_ips[\$i]} <<-EOF1
+					setssh \$tempip postgres $postgres_pass
+					EOF1
+				done	
+	                done
 		EOF
-	
+
 	setssh $balancer_ip root $root_pass
 	ssh -T root@$balancer_ip <<-EOF
-		setssh $master_ip root $root_pass
-		setssh $slave_ip root $root_pass
-
-		setssh $master_ip postgres $postgres_pass
-		setssh $slave_ip postgres $postgres_pass
+		server_ips=(${server_ips[@]})
+        	for ((j=0; j<${#server_ips[@]}; j++))
+			do
+			setssh \${server_ips[\$j]} postgres $postgres_pass
+			done	
 		EOF
 
+
+
 echo -e "Setting replicaton..."
-	ssh -T root@$slave_ip "service postgresql stop"
+        for ((j=0; j<${#slave_ips[@]}; j++))
+		do
+		ssh -T root@${slave_ips[$j]} "service postgresql stop"
+		done
 	
 	ssh -T root@$master_ip <<-EOF
+		server_ips=(${server_ips[@]})
 		echo "Setting postgresql.conf"
 			echo "#hot_standby = on" >> /var/lib/pgsql/data/postgresql.conf
 
 		echo "Setting pg_hba.conf"
-			echo "host    replication     postgres        $master_ip/32           trust
-host    replication     postgres        $slave_ip/32           trust" >> /var/lib/pgsql/data/pg_hba.conf
+        	for ((j=0; j<${#server_ips[@]}; j++))
+			do
+			echo "host    replication     postgres        \${server_ips[\$j]}/32           trust" >> /var/lib/pgsql/data/pg_hba.conf
+			done	
 
 		service postgresql restart
 		EOF
-	
+
 	echo "Replication..."
 	ssh -T postgres@$master_ip <<-EOF
+		slave_ips=(${slave_ips[@]})
 		psql -c "SELECT pg_start_backup('stream');"
-		rsync -a /var/lib/pgsql/data/ $slave_ip:/var/lib/pgsql/data/ --exclude postmaster.pid --exclude postmaster.opts
+	        for ((j=0; j<${#slave_ips[@]}; j++))
+			do
+			rsync -a /var/lib/pgsql/data/ \${slave_ips[\$j]}:/var/lib/pgsql/data/ --exclude postmaster.pid --exclude postmaster.opts
+			done
  		psql -c "SELECT pg_stop_backup();"
 		EOF
 
-	ssh -T postgres@$slave_ip <<-EOF
-		echo "Setting recovery.conf"
-			echo "standby_mode = 'on'
-primary_conninfo = 'host=$master_ip port=5432 user=postgres'
-trigger_file = 'failover'" > /var/lib/pgsql/data/recovery.conf
-		
-		echo "Setting postgresql.conf"
-			sed -i 's/#hot_standby = on/hot_standby = on/' /var/lib/pgsql/data/postgresql.conf
-		EOF
+        for ((j=0; j<${#slave_ips[@]}; j++))
+		do
+		ssh -T postgres@${slave_ips[$j]} <<-EOF
+			echo "Setting recovery.conf"
+				echo "standby_mode = 'on'
+	primary_conninfo = 'host=$master_ip port=5432 user=postgres'
+	trigger_file = 'failover'" > /var/lib/pgsql/data/recovery.conf
+			
+			echo "Setting postgresql.conf"
+				sed -i 's/#hot_standby = on/hot_standby = on/' /var/lib/pgsql/data/postgresql.conf
+			EOF
+		done
 
-	ssh -T root@$slave_ip "service postgresql start"
+        for ((j=0; j<${#slave_ips[@]}; j++))
+		do
+		ssh -T root@${slave_ips[$j]} "service postgresql start"
+		done
 
 	ssh -T root@$balancer_ip <<-EOF
 		echo "Setting pgpool.conf"
@@ -140,23 +140,20 @@ trigger_file = 'failover'" > /var/lib/pgsql/data/recovery.conf
 	
 	echo "Setting failover.sh"
 		scp $MY_DIR/data/failover.sh root@$balancer_ip:/etc/pgpool-II/
-	
+
+
 	ssh -T root@$balancer_ip <<-EOF
+		server_ips=(${server_ips[@]})
 		chmod 755 /etc/pgpool-II/failover.sh
 
-		echo "Loading pgpool-walrecrunning..."
-			scp /usr/share/pgpool-II/pgpool-walrecrunning.so root@$master_ip:/usr/lib64/pgsql/
-			scp /usr/share/pgpool-II/pgpool-walrecrunning.sql root@$master_ip:/usr/share/pgsql/
-	
-			scp /usr/share/pgpool-II/pgpool-walrecrunning.so root@$slave_ip:/usr/lib64/pgsql/
-			scp /usr/share/pgpool-II/pgpool-walrecrunning.sql root@$slave_ip:/usr/share/pgsql/
-
-		echo "Loading pgpool-recovery..."
-			scp /usr/share/pgpool-II/pgpool-recovery.so root@$master_ip:/usr/lib64/pgsql/
-			scp /usr/share/pgpool-II/pgpool-recovery.sql root@$master_ip:/usr/share/pgsql/
-	
-			scp /usr/share/pgpool-II/pgpool-recovery.so root@$slave_ip:/usr/lib64/pgsql/
-			scp /usr/share/pgpool-II/pgpool-recovery.sql root@$slave_ip:/usr/share/pgsql/
+		echo "Loading pgpool-walrecrunning and pgpool-recovery..."
+        	for ((j=0; j<${#server_ips[@]}; j++))
+			do
+			scp /usr/share/pgpool-II/pgpool-walrecrunning.so root@\${server_ips[\$j]}:/usr/lib64/pgsql/
+			scp /usr/share/pgpool-II/pgpool-walrecrunning.sql root@\${server_ips[\$j]}:/usr/share/pgsql/
+			scp /usr/share/pgpool-II/pgpool-recovery.so root@\${server_ips[\$j]}:/usr/lib64/pgsql/
+			scp /usr/share/pgpool-II/pgpool-recovery.sql root@\${server_ips[\$j]}:/usr/share/pgsql/
+			done	
 		EOF
 
 	ssh -T postgres@$master_ip <<-EOF
@@ -164,24 +161,55 @@ trigger_file = 'failover'" > /var/lib/pgsql/data/recovery.conf
 		psql -f /usr/share/pgsql/pgpool-recovery.sql template1
 		EOF
 
-	
-	echo "Setting basebackup.sh"
-		sed -i "s/eth0/$net_adapter/g" $MY_DIR/data/basebackup.sh
-		scp $MY_DIR/data/basebackup.sh postgres@$master_ip:/var/lib/pgsql/data/
-		scp $MY_DIR/data/basebackup.sh postgres@$slave_ip:/var/lib/pgsql/data/
-	
-	echo "Setting pgpool_remote_start"
-		scp $MY_DIR/data/pgpool_remote_start postgres@$master_ip:/var/lib/pgsql/data/
-		scp $MY_DIR/data/pgpool_remote_start postgres@$slave_ip:/var/lib/pgsql/data/
-	
-	ssh -T postgres@$master_ip <<-EOF
-		chmod 755 /var/lib/pgsql/data/basebackup.sh
-		chmod 755 /var/lib/pgsql/data/pgpool_remote_start
-		EOF
+	echo "Setting basebackup.sh and pgpool_remote_start"
+		cp $MY_DIR/data/basebackup.sh $MY_DIR/data/basebackup.sh.temp
 
-	ssh -T postgres@$slave_ip <<-EOF
-		chmod 755 /var/lib/pgsql/data/basebackup.sh
-		chmod 755 /var/lib/pgsql/data/pgpool_remote_start
-		EOF
+		sed -i "s/eth0/$net_adapter/g" $MY_DIR/data/basebackup.sh.temp
+        	for ((j=0; j<${#server_ips[@]}; j++))
+			do
+			scp $MY_DIR/data/basebackup.sh.temp postgres@${server_ips[$j]}:/var/lib/pgsql/data/basebackup.sh
+			scp $MY_DIR/data/pgpool_remote_start postgres@${server_ips[$j]}:/var/lib/pgsql/data/
 
+			ssh -T postgres@${server_ips[$j]} <<-EOF
+				chmod 755 /var/lib/pgsql/data/basebackup.sh
+				chmod 755 /var/lib/pgsql/data/pgpool_remote_start
+				EOF
+			done
+	}
+
+
+
+###################################
+
+case $what_todo in
+        install)
+                echo "Installing $0..."
+                if [ "$param1" = "" ]
+                then
+                        echo -e "Error: Input parameter isn't set!\n"
+                        exit 1
+                fi
+		master_ip=$param1
+                install
+                echo
+                ;;
+        set)
+                echo "Setting $0..."
+#                set
+                echo
+                ;;
+        unset)
+                echo "Unsetting $0..."
+                echo
+                ;;
+        erase)
+                echo "Erasing $0..."
+#                erase
+                echo
+                ;;
+        *)
+                echo -e "Usage: $0 { install | set <ip_addr> | unset <ip_addr> | erase }\n"
+                exit 1
+                ;;
+esac
 

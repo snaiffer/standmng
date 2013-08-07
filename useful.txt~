@@ -12,8 +12,3 @@
                 ${ips[$i]}
                 done
 
-        server_ips=(`standmng get Server`)
-        for ((i=0; i<${#server_ips[@]}; i++))
-                do
-                ${server_ips[$i]}
-                done

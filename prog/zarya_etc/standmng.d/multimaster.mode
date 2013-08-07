@@ -75,7 +75,7 @@ install()
                                 setssh \${server_ips[\$j]} postgres $postgres_pass
                                 done    
                         setssh $balancer_ip postgres $postgres_pass
-			EOF
+                        EOF
                 done
 
         setssh $balancer_ip postgres $postgres_pass
@@ -89,10 +89,10 @@ install()
                                 tempip="\${server_ips[\$j]}"
                                 ssh -T postgres@\${server_ips[\$i]} <<-EOF1
                                         setssh \$tempip postgres $postgres_pass
-					EOF1
+                                        EOF1
                                 done    
                         done
-		EOF
+                EOF
 
         setssh $balancer_ip root $root_pass
         ssh -T root@$balancer_ip <<-EOF
@@ -101,7 +101,7 @@ install()
                         do
                         setssh \${server_ips[\$j]} postgres $postgres_pass
                         done    
-		EOF
+                EOF
 
         for ((i=0; i<${#server_ips[@]}; i++))
                 do

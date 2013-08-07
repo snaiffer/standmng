@@ -4,6 +4,13 @@ ip=$1
 foruser=$2
 pass=$3
 
+CacheFile="$zarya_etc/setssh.cache"
+if [[ ! -e $CacheFile ]]
+then
+	touch $CacheFile
+	chmod 666 $CacheFile
+fi
+
 local_addr=$(ifconfig eth0 2> /dev/null | sed -n '2 {s/^.*inet addr:\([0-9.]*\) .*/\1/;p}')
 
 check()
@@ -66,12 +73,23 @@ setssh()
 		" > /dev/null
 	}
 
+if [[ "$ip" = "reset" ]]
+then
+	rm -f $CacheFile
+	echo "Cache file has been reseted"
+	exit 0
+fi
 
 echo "$local_addr : Setting ssh connection without password to $1..."
 check
 if [ "`echo $?`" = "0" ]
 then 
-	setssh
+	grep "$ip.*$foruser" $CacheFile &> /dev/null
+	if [[ "`echo $?`" = "1" ]]
+	then
+		setssh
+		echo -e "$ip\t$foruser" >> $CacheFile
+	fi
 else
 	echo -e "
 setssh --set ssh without password (through ssh public keys)
@@ -79,6 +97,8 @@ Usage: setssh <ip_addr> <user> <password>
 \t<ip_addr>\t--IP address of target machine
 \t<user>\t--user for which we want to connect
 \t<password>\t--password of <user> 
+setssh uses cache file for established ssh connection. You can reset this file by command:
+\tsetssh reset
 "
 fi
 

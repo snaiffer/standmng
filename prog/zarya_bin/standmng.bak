@@ -16,6 +16,7 @@ init_conf()
 	export nodes_files="$feed_files/nodes"
 
 	echo "export nodes_rules=\"$nodes_files/nodes.rules\"" >> $local_conf_file
+	export nodes_rules="$nodes_files/nodes.rules"
 
 	echo "export modules_files=\"$feed_files/modules\"" >> $local_conf_file
 	export modules_files="$feed_files/modules"
@@ -26,12 +27,10 @@ init_conf()
 	echo "export modes_files=\"$feed_files/modes\"" >> $local_conf_file
 	export modes_files="$feed_files/modes"
 
-	echo "export standmng_pkg=\"postgresql-test\"" >> $local_conf_file
-
 	echo "export pass=\"123456\"	#need to rework" >> $local_conf_file
-	echo "export root_pass=\"123456\"" >> $local_conf_file
-	echo "export postgres_pass=\"123456\"" >> $local_conf_file
-	echo "export net_adapter=\"eth0\"" >> $local_conf_file
+
+	echo "export standmng_pkg=\"postgresql-test\"" >> $local_conf_file
+	export standmng_pkg="postgresql-test"
 	}
 
 if [ ! -e $conf_file ]
@@ -412,7 +411,7 @@ CheckMode()
 
 	if [ "$what_to_find" = "$curmode" ]
 	then
-		return 2 
+		return -1
 	fi
 
         for ((i=0; i<${#ModesList[@]}; i++))
@@ -428,7 +427,7 @@ CheckMode()
 
 ask_master_ip()
         {
-        printf "Input IP of future Master: "
+        printf "Input IP of future Master:"
         read master_ip
 
         server_ips=(`standmng get Server`)
@@ -449,7 +448,8 @@ set_mode()
 
 	if [ "$curmode" != "" ]
 	then
-		$modes_files/$curmode.mode erase
+		echo "Uninstalling $curmode"
+		#uninstall $curmode erase
 	fi
 
 	case $mode in
@@ -462,11 +462,11 @@ set_mode()
 				exit 1
 			fi
 			
-			$modes_files/$mode.mode install $master_ip 
+			#$modes_files/$mode.mode install $master_ip 
 			
 			;;
 		*)
-			$modes_files/$mode.mode install
+			#$modes_files/$mode.mode install
 			;;
 	esac
 
@@ -637,7 +637,7 @@ case $what_todo in
 
 				CheckMode $mode
 				result=$?
-				if [ "$result" = "2" ]
+				if [ "$result" = "-1" ]
 				then
 					echo "Error: This mode is already set \"$mode\""
 					standmng modes list
