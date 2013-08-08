@@ -84,12 +84,6 @@ create_psql_user()
 	fi
 	}
 
-root_pass=123456
-postgres_pass=123456
-user1_pass=123456
-user2_pass=123456
-user3_pass=123456
-sepgsql_pass=123456
 ###################################
 
 install()
@@ -141,6 +135,9 @@ init_set()
 
 	echo "Setting DB for remote access /var/lib/pgsql/data/pg_hba.conf"
 		echo "listen_addresses = '*'" >> /var/lib/pgsql/data/postgresql.conf
+		echo "wal_level = hot_standby" >> /var/lib/pgsql/data/postgresql.conf
+		echo "max_wal_senders = 2" >> /var/lib/pgsql/data/postgresql.conf
+		echo "wal_keep_segments = 32" >> /var/lib/pgsql/data/postgresql.conf
 
 		for i in 1 2 3 4 5; do sed -i '$d' /var/lib/pgsql/data/pg_hba.conf; done
 

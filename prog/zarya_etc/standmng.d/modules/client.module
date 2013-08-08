@@ -18,12 +18,6 @@ change_passwd()
 		EOF
 	}
 
-root_pass=123456
-postgres_pass=123456
-user1_pass=123456
-user2_pass=123456
-user3_pass=123456
-sepgsql_pass=123456
 ###################################
 
 install()

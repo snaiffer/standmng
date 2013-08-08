@@ -28,9 +28,13 @@ init_conf()
 
 	echo "export standmng_pkg=\"postgresql-test\"" >> $local_conf_file
 
-	echo "export pass=\"123456\"	#need to rework" >> $local_conf_file
 	echo "export root_pass=\"123456\"" >> $local_conf_file
 	echo "export postgres_pass=\"123456\"" >> $local_conf_file
+	echo "export user1_pass=\"123456\"" >> $local_conf_file
+	echo "export user2_pass=\"123456\"" >> $local_conf_file
+	echo "export user3_pass=\"123456\"" >> $local_conf_file
+	echo "export sepgsql_pass=\"123456\"" >> $local_conf_file
+	echo "export repl_pass=\"123456\"" >> $local_conf_file
 	echo "export net_adapter=\"eth0\"" >> $local_conf_file
 	}
 
@@ -51,7 +55,7 @@ local_addr=$(ifconfig eth0| sed -n '2 {s/^.*inet addr:\([0-9.]*\) .*/\1/;p}')
 
 set_sshconnect()
 	{
-	setssh $1 root $pass
+	setssh $1 root $root_pass
 	}
 
 set_sshconnect_toall()
