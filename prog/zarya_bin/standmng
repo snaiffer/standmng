@@ -305,24 +305,32 @@ get()
         fi
         what_to_find=$1
 
-	if [ "$what_to_find" = "allip" ]
-	then
-		echo "${standips[@]}"	
-	else
-	        for ((i=0; i<${#standnodes[@]}; i++))
-	                do
-	                if [[ "$what_to_find" = "${standnodes[$i]}" ]]
-	                then
-	                	printf "${standips[$i]} "
-	                fi
-	
-	                if [[ "$what_to_find" = "${standips[$i]}" ]]
-	                then
-	                	echo "${standnodes[$i]}"
-				return 1
-	                fi
-	                done
-	fi
+        if [ "$what_to_find" = "allip" ]
+        then
+                echo "${standips[@]}"   
+        else
+                local first="true"
+                for ((i=0; i<${#standnodes[@]}; i++))
+                        do
+                        if [[ "$what_to_find" = "${standnodes[$i]}" ]]
+                        then
+                                if [[ "$first" = "false" ]]
+                                then
+                                        printf " "
+                                fi
+
+                                printf "${standips[$i]}"
+
+                                first="false"
+                        fi
+
+                        if [[ "$what_to_find" = "${standips[$i]}" ]]
+                        then
+                                echo "${standnodes[$i]}"
+                                return 1
+                        fi
+                        done
+        fi
 
         return 0
         }
@@ -440,6 +448,7 @@ ask_master_ip()
                 do
                 if [ "$master_ip" = "${server_ips[$i]}" ]
                 then
+			update_conf
                         return 0
                 fi
                 done
@@ -516,6 +525,7 @@ case $what_todo in
 		if [ "$?" = "0" ]
 		then
 			echo "Error: Can't find this node \"$node\""
+			$nodes_rules list
 			exit 1
 		fi
 
@@ -531,14 +541,14 @@ case $what_todo in
 
 		set_sshconnect_toall
 
-		echo -e "\n $standmng_pkg is installing..."
-		ssh -T root@$ip "yum -y -q install $standmng_pkg"
-		if [ "$?" = "1" ]
-		then
-			echo "Error: Can't install $standmng_pkg. May be you need set repo at first"
-			standmng del $ip
-			exit 1 
-		fi
+#		echo -e "\n $standmng_pkg is installing..."
+#		ssh -T root@$ip "yum -y -q install $standmng_pkg"
+#		if [ "$?" = "1" ]
+#		then
+#			echo "Error: Can't install $standmng_pkg. May be you need set repo at first"
+#			standmng del $ip
+#			exit 1 
+#		fi
 
 		update_conf
 		

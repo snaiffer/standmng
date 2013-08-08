@@ -139,10 +139,11 @@ install()
 			done
 	
 		ssh -T postgres@${server_ips[0]} <<-EOF
+                	server_ips=(${server_ips[@]})
 			psql -c "SELECT pg_start_backup('stream');"
 	        	for ((i=1; i<${#server_ips[@]}; i++))
 	                	do
-				rsync -a /var/lib/pgsql/data/ postgres@${server_ips[$i]}:/var/lib/pgsql/data/ --exclude postmaster.pid --exclude postmaster.opts
+				rsync -a /var/lib/pgsql/data/ postgres@\${server_ips[\$i]}:/var/lib/pgsql/data/ --exclude postmaster.pid --exclude postmaster.opts
 				done
 	 		psql -c "SELECT pg_stop_backup();"
 			EOF

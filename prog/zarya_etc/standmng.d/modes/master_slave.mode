@@ -60,6 +60,7 @@ install()
 		server_ips=(${server_ips[@]})
         	for ((j=0; j<${#server_ips[@]}; j++))
 			do
+			setssh \${server_ips[\$j]} root $root_pass
 			setssh \${server_ips[\$j]} postgres $postgres_pass
 			done	
 		EOF
@@ -140,7 +141,6 @@ echo -e "Setting replicaton..."
 	
 	echo "Setting failover.sh"
 		scp $MY_DIR/data/failover.sh root@$balancer_ip:/etc/pgpool-II/
-
 
 	ssh -T root@$balancer_ip <<-EOF
 		server_ips=(${server_ips[@]})

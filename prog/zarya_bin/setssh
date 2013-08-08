@@ -4,7 +4,7 @@ ip=$1
 foruser=$2
 pass=$3
 
-CacheFile="$zarya_etc/setssh.cache"
+CacheFile=~/.ssh/setssh.cache
 if [[ ! -e $CacheFile ]]
 then
 	touch $CacheFile
@@ -80,7 +80,7 @@ then
 	exit 0
 fi
 
-echo "$local_addr : Setting ssh connection without password to $1..."
+echo "$local_addr : Setting ssh connection without password to $ip for \"$foruser\""
 check
 if [ "`echo $?`" = "0" ]
 then 
