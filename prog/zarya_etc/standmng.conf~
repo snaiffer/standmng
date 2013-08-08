@@ -1,2 +1,0 @@
-declare -x standnodes=(Master Slave Balancer Client)
-declare -x standips=(192.168.100.45 192.168.100.46 192.168.100.47 192.168.100.48)

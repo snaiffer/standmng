@@ -1,7 +1,0 @@
-export feed_files="/usr/etc/zarya/standmng.d"
-export nodes_files="/usr/etc/zarya/standmng.d/nodes"
-export nodes_rules="/usr/etc/zarya/standmng.d/nodes/nodes.rules"
-export modules_files="/usr/etc/zarya/standmng.d/modules"
-export patches_files="/usr/etc/zarya/standmng.d/patches"
-export pass="123456"	#need to rework
-declare -x installed_patches=(general_utilits.patch patch1.patch)
