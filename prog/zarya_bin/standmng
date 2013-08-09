@@ -92,8 +92,6 @@ update_conf()
 	echo "declare -x curmode=$curmode" >> $conf_file
 	sed -i "/master_ip/d" $conf_file
 	echo "declare -x master_ip=$master_ip" >> $conf_file
-#	sed -i "/standmodes/d" $conf_file
-#	echo "declare -x standmodes=(${standmodes[@]})" >> $conf_file
 
 	for ((i=0; i < ${#standnodes[@]}; i++))
 		do
@@ -541,14 +539,14 @@ case $what_todo in
 
 		set_sshconnect_toall
 
-#		echo -e "\n $standmng_pkg is installing..."
-#		ssh -T root@$ip "yum -y -q install $standmng_pkg"
-#		if [ "$?" = "1" ]
-#		then
-#			echo "Error: Can't install $standmng_pkg. May be you need set repo at first"
-#			standmng del $ip
-#			exit 1 
-#		fi
+		echo -e "\n $standmng_pkg is installing..."
+		ssh -T root@$ip "yum -y -q install $standmng_pkg"
+		if [ "$?" = "1" ]
+		then
+			echo "Error: Can't install $standmng_pkg. May be you need set repo at first"
+			standmng del $ip
+			exit 1 
+		fi
 
 		update_conf
 		
