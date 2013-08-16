@@ -3,10 +3,6 @@ rm -Rf ./zarya_bin
 rm -Rf ./zarya_etc
 scp -r root@192.168.10.45:/usr/bin/zarya ./zarya_bin
 scp -r root@192.168.10.45:/usr/etc/zarya ./zarya_etc
-rm -f ./zarya_etc/netlbl.rules
-rm -f ./zarya_etc/standmng.conf
-rm -f ./zarya_etc/setssh.cache
-rm -f ./zarya_etc/standmng_local.conf
 
 ToVM:
 ssh -T root@192.168.10.45 <<-EOF

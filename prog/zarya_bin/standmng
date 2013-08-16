@@ -166,40 +166,46 @@ stand_list()
 	echo -e "\t<Node>\t\t<IP address>\t<Mode>"
 	local tabs="\t\t"
 	local temp_mode="none"
-	for ((i=0; i<${#standnodes[@]}; i++))
-		do
-		case $curmode in
-			master_slave)
-				if [ "${standips[$i]}" = "$master_ip" ]
-				then
-					temp_mode="Master"
-				elif [ "${standnodes[$i]}" = "Server" ]
-				then
-					temp_mode="Slave"
-				else
+	if [[ "${#standnodes[@]}" != "0" ]] 
+	then
+		for ((i=0; i<${#standnodes[@]}; i++))
+			do
+			case $curmode in
+				master_slave)
+					if [ "${standips[$i]}" = "$master_ip" ]
+					then
+						temp_mode="Master"
+					elif [ "${standnodes[$i]}" = "Server" ]
+					then
+						temp_mode="Slave"
+					else
+						temp_mode="none"
+					fi
+					;;
+				multimaster)
+					if [ "${standnodes[$i]}" = "Server" ]
+					then
+						temp_mode="Master"
+					else
+						temp_mode="none"
+					fi
+					;;
+				*)
 					temp_mode="none"
-				fi
-				;;
-			multimaster)
-				if [ "${standnodes[$i]}" = "Server" ]
-				then
-					temp_mode="Master"
-				else
-					temp_mode="none"
-				fi
-				;;
-			*)
-				temp_mode="none"
-				;;
-		esac
-		if [[ ${#standnodes[$i]} > 7 ]]
-		then
-			tabs="\t"
-		else
-			tabs="\t\t"
-		fi
-		echo -e "\t${standnodes[$i]}$tabs${standips[$i]}\t$temp_mode"
-		done
+					;;
+			esac
+			if [[ ${#standnodes[$i]} > 7 ]]
+			then
+				tabs="\t"
+			else
+				tabs="\t\t"
+			fi
+			echo -e "\t${standnodes[$i]}$tabs${standips[$i]}\t$temp_mode"
+			done
+	else
+		echo -e "\t none\t\t none\t\t none"
+	fi
+
 	if [ "$curmode" != "" ]
 	then
 		echo -e "Current mode of stand is \"$curmode\""
