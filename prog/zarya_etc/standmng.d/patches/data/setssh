@@ -4,7 +4,7 @@ ip=$1
 foruser=$2
 pass=$3
 
-CacheFile=~/.ssh/setssh.cache
+CacheFile=~/.setssh.cache
 if [[ ! -e $CacheFile ]]
 then
 	touch $CacheFile
