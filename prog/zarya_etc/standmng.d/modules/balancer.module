@@ -28,7 +28,7 @@ install()
 
 init_set()
 	{
-	chkconfig pgpool on
+	echo -e "\nrun_init service pgpool start" >> /etc/rc.local
 
 	echo "Setting selinux context for users..."
 		semanage user -m -r s0-s3 user_u
@@ -129,7 +129,7 @@ erase()
 	{
 	yum -y -q erase postgresql-libs postgresql postgresql-pgpool-II php-pgsql phpPgAdmin
 
-	chkconfig pgpool off
+	sed -i "/run_init service pgpool start/d" /etc/rc.local
 
 	iptables_mng del 9999
 	}

@@ -93,6 +93,7 @@ unlbl_deny()
 
 reset()
 	{
+	chkconfig netlabel on
 echo "
 #!/bin/bash
 

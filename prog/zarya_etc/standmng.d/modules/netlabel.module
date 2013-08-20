@@ -8,6 +8,7 @@ param1=$2
 install()
 	{
 	yum -y -q install netlabel_tools
+	chkconfig netlabel on
 	}
 
 init_set()
@@ -37,6 +38,7 @@ set()
 
 erase()
 	{
+	chkconfig netlabel off
 	yum -y -q erase netlabel_tools
 	}
 
