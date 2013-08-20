@@ -24,7 +24,7 @@ change_passwd()
 # 	user=$1
 # 	pass=$2
 # 	admin=$3 #"y" or "n"
-# 
+#
 # 	echo "Creating new psql user: \"$user\""
 # 	if [ "$admin" = "y" ]
 # 	then
@@ -93,16 +93,16 @@ install()
 
 init_set()
 	{
-	echo "run_init /etc/init.d/postgresql start" >> /etc/rc.local
+	chkconfig postgresql on
 
-	service postgresql initdb
+	run_init service postgresql initdb
 
 	echo "Creating users..."
-		adduser user1 
-		adduser user2 
-		adduser user3 
-		adduser -Z dbadm_u sepgsql 
-		usermod -aG wheel sepgsql 
+		adduser user1
+		adduser user2
+		adduser user3
+		adduser -Z dbadm_u sepgsql
+		usermod -aG wheel sepgsql
 
 		change_passwd user1 $user1_pass
 		change_passwd user2 $user2_pass
@@ -110,7 +110,7 @@ init_set()
 		change_passwd sepgsql $sepgsql_pass
 		change_passwd postgres $postgres_pass
 
-		service postgresql start
+		run_init service postgresql start
 
 	echo "Creating PostgreSQL users..."
 		create_psql_user user1 $user1_pass n
@@ -121,14 +121,14 @@ init_set()
 
 
 	echo "Setting selinux context for users..."
-		semanage user -m -r s0-s3 user_u 
-		semanage login -a -s user_u -r s3 user1 
-		semanage login -a -s user_u -r s2 user2 
-		semanage login -a -s user_u -r s0 user3 
-		semanage login -m -r s0-s3 sepgsql 
-		chcon -R -l 's3' /home/user1 
-		chcon -R -l 's2' /home/user2 
-		chcon -R -l 's0' /home/user3 
+		semanage user -m -r s0-s3 user_u
+		semanage login -a -s user_u -r s3 user1
+		semanage login -a -s user_u -r s2 user2
+		semanage login -a -s user_u -r s0 user3
+		semanage login -m -r s0-s3 sepgsql
+		chcon -R -l 's3' /home/user1
+		chcon -R -l 's2' /home/user2
+		chcon -R -l 's0' /home/user3
 		chcon -R -l 's0' /home/sepgsql
 
 	iptables_mng add 5432
@@ -155,7 +155,7 @@ init_set()
 		echo -e "host    all             all             ${ips[$i]}/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
 		done
 
-	service postgresql restart
+	run_init service postgresql restart
 
 	su -l sepgsql -c 'psql -d postgres -f /usr/lib64/pgsql/test/regress/scriptsforsectest/testdb.sql > /dev/null'
 	}
@@ -163,20 +163,20 @@ init_set()
 set()
 	{
 	echo -e "host    all             all             $param1/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
-	service postgresql restart
+	run_init service postgresql restart
 	}
 
 unset()
 	{
 	sed -i "/$param1/d" /var/lib/pgsql/data/pg_hba.conf
-	service postgresql restart
+	run_init service postgresql restart
 	}
 
 erase()
 	{
 	yum -y -q erase postgresql-libs postgresql postgresql-server postgresql-test postgresql-contrib
 
-	sed -i "/postgresql start/d" /etc/rc.local
+	chkconfig postgresql off
 
 	iptables_mng del 5432
 	}

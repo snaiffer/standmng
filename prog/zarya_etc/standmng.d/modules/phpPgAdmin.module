@@ -23,9 +23,9 @@ set()
 			sed -i "s/<\/Location>/Allow from $client_ip\n<\/Location>/" /etc/httpd/conf.d/phpPgAdmin.conf
 		fi
 
-	service httpd restart
-	service httpd start
-	service httpd start
+	run_init service httpd restart
+	run_init service httpd start
+	run_init service httpd start
 	}
 
 unset()
@@ -33,9 +33,9 @@ unset()
 	echo "Setting /etc/httpd/conf.d/phpPgAdmin.conf"
 		sed -i "/$param1/d" /etc/httpd/conf.d/phpPgAdmin.conf
 
-	service httpd restart
-	service httpd start
-	service httpd start
+	run_init service httpd restart
+	run_init service httpd start
+	run_init service httpd start
 	}
 
 erase()

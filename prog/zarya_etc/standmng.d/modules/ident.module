@@ -23,7 +23,7 @@ init_set()
 	echo "server_args = -t60 --xerror --os" >> /etc/xinetd.d/auth
 	echo "}" >> /etc/xinetd.d/auth
 
-	service xinetd start
+	run_init service xinetd start
 	}
 
 erase()

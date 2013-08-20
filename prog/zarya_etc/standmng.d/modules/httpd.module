@@ -19,15 +19,15 @@ init_set()
 
 	semanage user -m -R "auditadm_r dbadm_r staff_r secadm_r sysadm_r system_r webadm_r" root
 
-	echo "run_init /etc/init.d/httpd start" >> /etc/rc.local
-	service httpd start
+	chkconfig httpd on
+	run_init service httpd start
 	}
 
 erase()
 	{
 	yum -y -q erase httpd
 
-	sed -i "/httpd start/d" /etc/rc.local
+	chkconfig httpd off
 
 	iptables_mng del 80
 	}

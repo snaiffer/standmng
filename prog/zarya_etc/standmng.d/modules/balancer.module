@@ -28,18 +28,18 @@ install()
 
 init_set()
 	{
-	echo "run_init /etc/init.d/pgpool start" >> /etc/rc.local
+	chkconfig pgpool on
 
 	echo "Setting selinux context for users..."
-		semanage user -m -r s0-s3 user_u 
+		semanage user -m -r s0-s3 user_u
 		semanage user -a -R dbadm_r -r s0-s3:c0.c1023 dbadm_u
 
 	echo "Creating users..."
-		adduser user1 
-		adduser user2 
-		adduser user3 
-		adduser -Z dbadm_u sepgsql 
-		usermod -aG wheel sepgsql 
+		adduser user1
+		adduser user2
+		adduser user3
+		adduser -Z dbadm_u sepgsql
+		usermod -aG wheel sepgsql
 
 		change_passwd user1 $user1_pass
 		change_passwd user2 $user2_pass
@@ -48,13 +48,13 @@ init_set()
 		change_passwd postgres $postgres_pass
 
 	echo "Setting selinux context for users..."
-		semanage login -a -s user_u -r s3 user1 
-		semanage login -a -s user_u -r s2 user2 
-		semanage login -a -s user_u -r s0 user3 
-		semanage login -m -r s0-s3 sepgsql 
-		chcon -R -l 's3' /home/user1 
-		chcon -R -l 's2' /home/user2 
-		chcon -R -l 's0' /home/user3 
+		semanage login -a -s user_u -r s3 user1
+		semanage login -a -s user_u -r s2 user2
+		semanage login -a -s user_u -r s0 user3
+		semanage login -m -r s0-s3 sepgsql
+		chcon -R -l 's3' /home/user1
+		chcon -R -l 's2' /home/user2
+		chcon -R -l 's0' /home/user3
 		chcon -R -l 's0' /home/sepgsql
 
 	iptables_mng add 9999
@@ -89,47 +89,47 @@ init_set()
 
 	echo "Setting pool_hba.conf..."
 		for i in 1 2 3; do sed -i '$d' /etc/pgpool-II/pool_hba.conf; done
-	
-		echo -e "local   all             all                                        trust" >> /etc/pgpool-II/pool_hba.conf 
-		echo -e "host    all             all             127.0.0.1/32               trust" >> /etc/pgpool-II/pool_hba.conf 
-		echo -e "\n" >> /etc/pgpool-II/pool_hba.conf 
-	
+
+		echo -e "local   all             all                                        trust" >> /etc/pgpool-II/pool_hba.conf
+		echo -e "host    all             all             127.0.0.1/32               trust" >> /etc/pgpool-II/pool_hba.conf
+		echo -e "\n" >> /etc/pgpool-II/pool_hba.conf
+
 		ips=(`standmng get allip`)
 		for ((i=0; i<${#ips[@]}; i++))
 			do
-			echo -e "host    all             all             ${ips[$i]}/32           md5" >> /etc/pgpool-II/pool_hba.conf 
+			echo -e "host    all             all             ${ips[$i]}/32           md5" >> /etc/pgpool-II/pool_hba.conf
 			done
-	
+
 	echo "Setting passwords for pgpool..."
 		touch /etc/pgpool-II/pool_passwd
 		chmod a+w /etc/pgpool-II/pool_passwd
-	
-		su -l user1 -c "pg_md5 --md5auth $user1_pass" 
-		su -l user2 -c "pg_md5 --md5auth $user2_pass" 
-		su -l user3 -c "pg_md5 --md5auth $user3_pass" 
-		su -l sepgsql -c "pg_md5 --md5auth $sepgsql_pass" 
-		su -l postgres -c "pg_md5 --md5auth $postgres_pass" 
 
-	service pgpool start
+		su -l user1 -c "pg_md5 --md5auth $user1_pass"
+		su -l user2 -c "pg_md5 --md5auth $user2_pass"
+		su -l user3 -c "pg_md5 --md5auth $user3_pass"
+		su -l sepgsql -c "pg_md5 --md5auth $sepgsql_pass"
+		su -l postgres -c "pg_md5 --md5auth $postgres_pass"
+
+	run_init service pgpool start
 	}
 
 set()
 	{
-	echo -e "host    all             all             $param1/32           md5" >> /etc/pgpool-II/pool_hba.conf 
-	service pgpool restart
+	echo -e "host    all             all             $param1/32           md5" >> /etc/pgpool-II/pool_hba.conf
+	run_init service pgpool restart
 	}
 
 unset()
 	{
-	sed -i "/$param1/d" /etc/pgpool-II/pool_hba.conf 
-	service pgpool restart
+	sed -i "/$param1/d" /etc/pgpool-II/pool_hba.conf
+	run_init service pgpool restart
 	}
 
 erase()
 	{
 	yum -y -q erase postgresql-libs postgresql postgresql-pgpool-II php-pgsql phpPgAdmin
 
-	sed -i "/pgpool start/d" /etc/rc.local
+	chkconfig pgpool off
 
 	iptables_mng del 9999
 	}

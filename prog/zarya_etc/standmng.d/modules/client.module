@@ -23,6 +23,7 @@ change_passwd()
 install()
 	{
 	yum -y -q install postgresql-libs postgresql
+	chkconfig postgresql on
 	}
 
 init_set()
@@ -45,7 +46,6 @@ init_set()
 		change_passwd postgresql $postgres_pass
 
 	echo "Setting selinux context for users..."
-		semanage user -m -r s0-s3 user_u 
 		semanage login -a -s user_u -r s3 user1 
 		semanage login -a -s user_u -r s2 user2 
 		semanage login -a -s user_u -r s0 user3 
@@ -58,9 +58,8 @@ init_set()
 
 erase()
 	{
+	chkconfig postgresql off	
 	yum -y -q erase postgresql-libs postgresql
-
-	sed -i "/postgresql start/d" /etc/rc.local
 
 	iptables_mng del 5432
 	}
