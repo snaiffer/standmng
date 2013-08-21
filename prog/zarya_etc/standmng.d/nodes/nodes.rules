@@ -36,15 +36,16 @@ to()
 			echo "Error: Input parameter isn't set or set incorrect!"
 			;;
 	esac
-			
+
         if [ "$new_ip" = "" ]
         then
                 echo "Error: Input parameter isn't set!"
                 exit 1
         fi
-	
+
 	ssh -T root@$new_ip <<-EOF
-        	standmng install_newpatches
+			standmng patches install local
+
 		$nodes_files/`standmng get $new_ip`.node $action
 		EOF
 
@@ -55,7 +56,7 @@ to()
 		then
 			echo -e "\n\tSetting $new_ip on ${ips[$i]}"
 	                ssh -T root@${ips[$i]} <<-EOF
-        	                standmng install_newpatches
+								 standmng patches install local
 				$nodes_files/`standmng get ${ips[$i]}`.node $action2 $new_ip
 				EOF
 		fi
@@ -157,10 +158,10 @@ erase()
 
 case $what_todo in
 	install)
-		install $param1	
+		install $param1
 		;;
 	erase)
-		erase $param1	
+		erase $param1
 		;;
 	check)
 		check $param1

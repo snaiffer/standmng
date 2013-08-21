@@ -625,17 +625,29 @@ case $what_todo in
 	patches)
 		case $param1 in
 			install)
-				update_conf
-
-			        for ((i=0; i<${#standnodes[@]}; i++))
-			                do
-					ssh -T root@${standips[$i]} <<-EOF
-						standmng install_newpatches
-						EOF
-					done
+				if [[ "$param2" != "" ]]
+				then
+					if [[ "$param2" = "local" ]]
+					then
+						install_newpatches
+					else
+						ssh -T root@$param2 <<-EOF
+							standmng patches install local
+							EOF
+					fi
+				else
+					update_conf
+	
+				        for ((i=0; i<${#standnodes[@]}; i++))
+				                do
+						ssh -T root@${standips[$i]} <<-EOF
+							standmng patches install local
+							EOF
+						done
+				fi
 				;;
 			*)
-				echo "Usage: $0 $what_todo { install }"
+				echo "Usage: $0 $what_todo { install | install { local | <ip_addr> } }"
 				exit 1
 				;;
 		esac
@@ -714,14 +726,16 @@ standmng --stand manager
 \tnodes\t--list of availiable nodes
 \talive\t--check alive of the stand's machine
 \tpatches\t
-\t\tinstall\t--install new patches
+\t\tinstall\t--install new patches on the stand's machine
+\t\t\tlocal\t--install new patches on the local machine even if it isn't in the stand
+\t\t\t<ip_addr>\t--install new patches on <ip_addr> machine even if it isn't in the stand
 \tmodes\t
 \t\tset <mode_name>\t--set mode
 \t\tlist\t--list of availiable modes
 "
 		;;
 	*)
-		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <ip_addr> | nodes | alive | patches { install } | modes { set <mode_name> | list }"
+		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <ip_addr> | nodes | alive | patches { install | install { local | <ip_addr> } } | modes { set <mode_name> | list }"
 		exit 1
 		;;
 esac

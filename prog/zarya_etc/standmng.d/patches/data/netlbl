@@ -183,7 +183,7 @@ netlbl --netlabel manager
 "
 		;;
 	*)
-		echo "Usage: $0 { on | off | start | stop | add <ip_addr> | reset | status | unlbl { access | deny } }"
+		echo "Usage: $0 { on | off | start | stop | add <ip_addr> | reset | status | unlbl { access | deny } | help }"
 		exit 1
 		;;
 esac
