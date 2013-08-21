@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Setting PAM for sshd..."
+echo "session    required    pam_namespace.so" >> /etc/pam.d/sshd
+
