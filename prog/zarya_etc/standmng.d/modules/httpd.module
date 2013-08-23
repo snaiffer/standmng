@@ -20,7 +20,7 @@ init_set()
 	semanage user -m -R "auditadm_r dbadm_r staff_r secadm_r sysadm_r system_r webadm_r" root
 
 	chkconfig httpd on
-	run_init service httpd start
+	 service httpd start
 	}
 
 erase()

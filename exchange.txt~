@@ -9,13 +9,12 @@ rm -f ./zarya_etc/setssh.cache
 rm -f ./zarya_etc/standmng_local.conf
 
 ToVM:
-addr=45
-ssh -T root@192.168.10.$addr <<-EOF
+ssh -T root@192.168.10.45 <<-EOF
 rm -Rf /usr/bin/zarya
 rm -Rf /usr/etc/zarya
 EOF
-scp -r ./zarya_bin root@192.168.10.$addr:/usr/bin/zarya
-scp -r ./zarya_etc root@192.168.10.$addr:/usr/etc/zarya
+scp -r ./zarya_bin root@192.168.10.45:/usr/bin/zarya
+scp -r ./zarya_etc root@192.168.10.45:/usr/etc/zarya
 
 
 

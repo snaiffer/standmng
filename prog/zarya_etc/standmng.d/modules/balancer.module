@@ -110,19 +110,19 @@ init_set()
 		su -l sepgsql -c "pg_md5 --md5auth $sepgsql_pass"
 		su -l postgres -c "pg_md5 --md5auth $postgres_pass"
 
-	run_init service pgpool start
+	service pgpool start
 	}
 
 set()
 	{
 	echo -e "host    all             all             $param1/32           md5" >> /etc/pgpool-II/pool_hba.conf
-	run_init service pgpool restart
+	service pgpool restart
 	}
 
 unset()
 	{
 	sed -i "/$param1/d" /etc/pgpool-II/pool_hba.conf
-	run_init service pgpool restart
+	service pgpool restart
 	}
 
 erase()

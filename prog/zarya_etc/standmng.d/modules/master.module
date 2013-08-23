@@ -95,7 +95,7 @@ init_set()
 	{
 	chkconfig postgresql on
 
-	run_init service postgresql initdb
+	 service postgresql initdb
 
 	echo "Creating users..."
 		adduser user1
@@ -110,7 +110,7 @@ init_set()
 		change_passwd sepgsql $sepgsql_pass
 		change_passwd postgres $postgres_pass
 
-		run_init service postgresql start
+		 service postgresql start
 
 	echo "Creating PostgreSQL users..."
 		create_psql_user user1 $user1_pass n
@@ -155,7 +155,7 @@ init_set()
 		echo -e "host    all             all             ${ips[$i]}/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
 		done
 
-	run_init service postgresql restart
+	 service postgresql restart
 
 	su -l sepgsql -c 'psql -d postgres -f /usr/lib64/pgsql/test/regress/scriptsforsectest/testdb.sql > /dev/null'
 	}
@@ -163,13 +163,13 @@ init_set()
 set()
 	{
 	echo -e "host    all             all             $param1/32           ident" >> /var/lib/pgsql/data/pg_hba.conf
-	run_init service postgresql restart
+	 service postgresql restart
 	}
 
 unset()
 	{
 	sed -i "/$param1/d" /var/lib/pgsql/data/pg_hba.conf
-	run_init service postgresql restart
+	 service postgresql restart
 	}
 
 erase()

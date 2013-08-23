@@ -80,8 +80,6 @@ update_sshconnection_forall()
 # Copy all files except local conf to other machines
 update_conf()
 	{
-	echo "Updating config's files..."
-
 	sed -i "/standnodes/d" $conf_file
 	echo "declare -x standnodes=(${standnodes[@]})" >> $conf_file
 	sed -i "/standips/d" $conf_file
@@ -97,23 +95,14 @@ update_conf()
 		do
 		if [ "$local_addr" != "${standips[$i]}" ]
 		then
-			ssh -T ${standips[$i]} <<-EOF
-				mkdir -p $zarya_bin
-				mkdir -p $feed_files
-				
-				grep 'zarya_bin' /etc/profile &> /dev/null
-				if [ "\$?" = "1" ]
-				then
-					echo "export zarya_bin=$zarya_bin" >> /etc/profile
-					echo "export zarya_etc=$zarya_etc" >> /etc/profile
-					echo "export PATH=\"$PATH:$zarya_bin\" " >> /etc/profile
-				fi
-				EOF
-			scp -rq $zarya_bin/standmng ${standips[$i]}:$zarya_bin/
+			scp -rq $zarya_bin/* ${standips[$i]}:$zarya_bin/
 			scp -rq $conf_file ${standips[$i]}:$conf_file
 			scp -rq $feed_files/* ${standips[$i]}:$feed_files/
 		fi
 		done
+
+	echo "Config's files were updated
+"
 	}
 
 get_index()
