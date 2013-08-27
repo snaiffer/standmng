@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "Setting PAM for run_init..."
+	sed -i "/#%PAM/a auth       sufficient   pam_rootok.so" /etc/pam.d/run_init

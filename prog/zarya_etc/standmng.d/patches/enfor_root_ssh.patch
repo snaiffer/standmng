@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Setting accessing for managing root via ssh in enforcing mode..."
+		setsebool -P ssh_sysadm_login on
+		sed -i "/^#system_r:sshd_t/ s/^#//" /etc/selinux/mls/contexts/users/root
