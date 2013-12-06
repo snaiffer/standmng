@@ -70,9 +70,7 @@ update_sshconnection_forall()
 	{
 	for ((i=0; i<${#standnodes[@]}; i++))
 		do
-		ssh -T root@${standips[$i]} <<-EOF
-			standmng set_ssh
-			EOF
+		ssh -T root@${standips[$i]} "standmng set_ssh"
 		done
 	}
 
@@ -583,9 +581,7 @@ case $what_todo in
 		get_index $ip
 		node=${standnodes[$gotindex]}
 
-                ssh -T root@$ip <<-EOF
-                        $nodes_rules erase $ip
-			EOF
+                ssh -T root@$ip "$nodes_rules erase $ip"
                 if [ "$?" != "0" ]
                 then
                         echo "Error: During execution $nodes_rules"
@@ -620,18 +616,14 @@ case $what_todo in
 					then
 						install_newpatches
 					else
-						ssh -T root@$param2 <<-EOF
-							standmng patches install local
-							EOF
+						ssh -T root@$param2 "standmng patches install local"
 					fi
 				else
 					update_conf
 	
 				        for ((i=0; i<${#standnodes[@]}; i++))
 				                do
-						ssh -T root@${standips[$i]} <<-EOF
-							standmng patches install local
-							EOF
+						ssh -T root@${standips[$i]} "standmng patches install local"
 						done
 				fi
 				;;
@@ -645,11 +637,11 @@ case $what_todo in
 	modes)
 		case $param1 in
 			set)
-		                if [ "$param2" = "" ]
-		                then
-		                        echo "Error: Input parameter isn't set!"
-		                        exit 1
-		                fi
+        if [ "$param2" = "" ]
+        then
+          echo "Error: Input parameter isn't set!"
+          exit 1
+        fi
 				mode=$param2
 
 				update_ModesList
@@ -680,14 +672,17 @@ case $what_todo in
 
 				update_conf
 
-                		echo "The mode has been set"
-		                stand_list
+        echo "The mode has been set"
+        stand_list
 				;;
 			list)
 				modes_list
 				;;
+			current)
+				echo $curmode
+				;;
 			*)
-				echo "Usage: $0 $what_todo { set <mode_name> | list }"
+				echo "Usage: $0 $what_todo { set <mode_name> | list | current}"
 				exit 1
 				;;
 		esac
@@ -721,10 +716,11 @@ standmng --stand manager
 \tmodes\t
 \t\tset <mode_name>\t--set mode
 \t\tlist\t--list of availiable modes
+\t\tcurrent\t--show the current mode
 "
 		;;
 	*)
-		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <ip_addr> | nodes | alive | patches { install | install { local | <ip_addr> } } | modes { set <mode_name> | list }"
+		echo "Usage: $0 { list | add <node_name> <ip_addr> | del <ip_addr> | nodes | alive | patches { install | install { local | <ip_addr> } } | modes { set <mode_name> | list | current }"
 		exit 1
 		;;
 esac

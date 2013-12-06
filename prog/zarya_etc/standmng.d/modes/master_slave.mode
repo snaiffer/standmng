@@ -23,8 +23,7 @@ slave_ips=${server_ips[@]}
 slave_ips=( `echo ${slave_ips[@]//$master_ip/}` )
 
 
-install()
-	{
+install() {
 	echo -e "Setting ssh connection..."
         for ((i=0; i<${#server_ips[@]}; i++))
                 do
@@ -34,11 +33,11 @@ install()
         		for ((j=0; j<${#server_ips[@]}; j++))
 		                do
 				setssh \${server_ips[\$j]} postgres $postgres_pass
-				done	
+				done
 			setssh $balancer_ip postgres $postgres_pass
 			EOF
                 done
-	
+
 	setssh $balancer_ip postgres $postgres_pass
 	ssh -T postgres@$balancer_ip <<-EOF
 		server_ips=(${server_ips[@]})
@@ -51,7 +50,7 @@ install()
 				ssh -T postgres@\${server_ips[\$i]} <<-EOF1
 					setssh \$tempip postgres $postgres_pass
 					EOF1
-				done	
+				done
 	                done
 		EOF
 
@@ -62,7 +61,7 @@ install()
 			do
 			setssh \${server_ips[\$j]} root $root_pass
 			setssh \${server_ips[\$j]} postgres $postgres_pass
-			done	
+			done
 		EOF
 
 
@@ -72,7 +71,7 @@ echo -e "Setting replicaton..."
 		do
 		ssh -T root@${slave_ips[$j]} "service postgresql stop"
 		done
-	
+
 	ssh -T root@$master_ip <<-EOF
 		server_ips=(${server_ips[@]})
 		echo "Setting postgresql.conf"
@@ -82,7 +81,7 @@ echo -e "Setting replicaton..."
         	for ((j=0; j<${#server_ips[@]}; j++))
 			do
 			echo "host    replication     postgres        \${server_ips[\$j]}/32           trust" >> /var/lib/pgsql/data/pg_hba.conf
-			done	
+			done
 
 		service postgresql restart
 		EOF
@@ -105,7 +104,7 @@ echo -e "Setting replicaton..."
 				echo "standby_mode = 'on'
 	primary_conninfo = 'host=$master_ip port=5432 user=postgres'
 	trigger_file = 'failover'" > /var/lib/pgsql/data/recovery.conf
-			
+
 			echo "Setting postgresql.conf"
 				sed -i 's/#hot_standby = on/hot_standby = on/' /var/lib/pgsql/data/postgresql.conf
 			EOF
@@ -134,11 +133,11 @@ echo -e "Setting replicaton..."
 			sed -i "s/health_check_timeout =.*/health_check_timeout = 20/" /etc/pgpool-II/pgpool.conf
 			sed -i "s/health_check_period =.*/health_check_period = 15/" /etc/pgpool-II/pgpool.conf
 			sed -i "s/health_check_user =.*/health_check_user = 'postgres'/" /etc/pgpool-II/pgpool.conf
-			
+
 		pgpool -m fast stop
 		service pgpool start
 		EOF
-	
+
 	echo "Setting failover.sh"
 		scp $MY_DIR/data/failover.sh root@$balancer_ip:/etc/pgpool-II/
 
@@ -153,7 +152,7 @@ echo -e "Setting replicaton..."
 			scp /usr/share/pgpool-II/pgpool-walrecrunning.sql root@\${server_ips[\$j]}:/usr/share/pgsql/
 			scp /usr/share/pgpool-II/pgpool-recovery.so root@\${server_ips[\$j]}:/usr/lib64/pgsql/
 			scp /usr/share/pgpool-II/pgpool-recovery.sql root@\${server_ips[\$j]}:/usr/share/pgsql/
-			done	
+			done
 		EOF
 
 	ssh -T postgres@$master_ip <<-EOF
@@ -178,6 +177,49 @@ echo -e "Setting replicaton..."
 	}
 
 
+erase() {
+  echo -e "Turn off services..."
+    ssh -T root@$balancer_ip "pgpool -m fast stop"
+
+    for ((j=0; j<${#server_ips[@]}; j++))
+      do
+      ssh -T root@${server_ips[$j]} "service postgresql stop"
+      done
+
+  echo -e "Settings..."
+    for ((j=0; j<${#server_ips[@]}; j++))
+      do
+      echo -e "\t for ${server_ips[$j]}:"
+      echo "Setting postgresql.conf"
+        ssh -T root@${server_ips[$j]} "sed -i \"/hot_standby = on/d\" /var/lib/pgsql/data/postgresql.conf"
+      echo "Setting pg_hba.conf"
+        ssh -T root@${server_ips[$j]} "sed -i \"/host.*replication.*postgres.*32.*trust/d\" /var/lib/pgsql/data/pg_hba.conf"
+      echo "Removing recovery.conf"
+        ssh -T root@${server_ips[$j]} "rm /var/lib/pgsql/data/recovery.conf" &> /dev/null
+      done
+
+      echo -e "\t for $balancer_ip:"
+	ssh -T root@$balancer_ip <<-EOF
+		echo "Setting pgpool.conf"
+			sed -i "s/replication_mode =.*/replication_mode = false/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/load_balance_mode =.*/load_balance_mode = false/" /etc/pgpool-II/pgpool.conf
+
+			sed -i "s/recovery_1st_stage_command =.*/recovery_1st_stage_command = ''/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/recovery_2nd_stage_command =.*/recovery_2nd_stage_command = ''/" /etc/pgpool-II/pgpool.conf
+
+			sed -i "s/master_slave_mode =.*/master_slave_mode = false/" /etc/pgpool-II/pgpool.conf
+			sed -i "s/failover_command =.*/failover_command = ''/" /etc/pgpool-II/pgpool.conf
+		EOF
+
+  echo -e "Turn on services..."
+    for ((j=0; j<${#server_ips[@]}; j++))
+      do
+      ssh -T root@${server_ips[$j]} "service postgresql start"
+      done
+
+    ssh -T root@$balancer_ip "service pgpool start"
+  }
+
 
 ###################################
 
@@ -189,7 +231,7 @@ case $what_todo in
                         echo -e "Error: Input parameter isn't set!\n"
                         exit 1
                 fi
-		master_ip=$param1
+		            master_ip=$param1
                 install
                 echo
                 ;;
@@ -204,7 +246,7 @@ case $what_todo in
                 ;;
         erase)
                 echo "Erasing $0..."
-#                erase
+                erase
                 echo
                 ;;
         *)
