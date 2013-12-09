@@ -1,0 +1,23 @@
+#!/bin/bash
+
+mkdir -p /usr/lib64/pgsql/test/regress/scriptsforsectest/
+
+echo "replacing install_master.sh..."
+  cp $patches_ownData/install_master.sh /usr/lib64/pgsql/test/regress/scriptsforsectest/
+
+echo "replacing multimaster.sh..."
+  cp $patches_ownData/multimaster.sh /usr/lib64/pgsql/test/regress/scriptsforsectest/
+
+echo "replacing failover_master.sh..."
+  cp $patches_ownData/failover_master.sh /usr/lib64/pgsql/test/regress/scriptsforsectest/
+
+chmod 777 -R *
+
+
+#ips=(`standmng get allip`)
+#for ((i=0; i<${#ips[@]}; i++))
+#	do
+#	scp $patches_ownData/netlbl root@${ips[$i]}:$zarya_bin
+#	scp $patches_ownData/iptables_mng root@${ips[$i]}:$zarya_bin
+#	done
+
