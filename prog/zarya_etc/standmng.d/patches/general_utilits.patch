@@ -1,14 +1,14 @@
 #!/bin/bash
 
 echo "Installing netlbl and iptables_mng ..."
-cp $patches_files/data/netlbl $zarya_bin
-cp $patches_files/data/iptables_mng $zarya_bin
-cp $patches_files/data/setssh $zarya_bin
+cp $patches_ownData/netlbl $zarya_bin
+cp $patches_ownData/iptables_mng $zarya_bin
+cp $patches_ownData/setssh $zarya_bin
 
 #ips=(`standmng get allip`)
 #for ((i=0; i<${#ips[@]}; i++))
 #	do
-#	scp $patches_files/data/netlbl root@${ips[$i]}:$zarya_bin
-#	scp $patches_files/data/iptables_mng root@${ips[$i]}:$zarya_bin
+#	scp $patches_ownData/netlbl root@${ips[$i]}:$zarya_bin
+#	scp $patches_ownData/iptables_mng root@${ips[$i]}:$zarya_bin
 #	done
 

@@ -4,7 +4,7 @@ FAILED_NODE=$1
 NEW_MASTER=$2
 TRIGGER_FILE=$3
 
-if [ $FAILED_NODE = 0 ]; 
+if [ $FAILED_NODE = 1 ];
 then
 	echo "Ведомый сервер вышел из строя"
 	exit 1
