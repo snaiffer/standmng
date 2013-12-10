@@ -23,9 +23,6 @@ init_conf()
 	echo "export patches_files=\"$feed_files/patches\"" >> $local_conf_file
 	export patches_files="$feed_files/patches"
 	
-	echo "export patches_data=\"$feed_files/patches/data\"" >> $local_conf_file
-	export patches_data="$feed_files/patches/data"
-	
 	echo "export modes_files=\"$feed_files/modes\"" >> $local_conf_file
 	export modes_files="$feed_files/modes"
 
@@ -385,7 +382,7 @@ install_newpatches()
 				echo -e "\t Installing patch \"$j\"..."
 				chmod +x $patches_files/*
 
-        export patches_ownData="$feed_files/patches/data/$j"
+        export patches_ownData=$patches_files/data/`echo "$j" | sed "s/\..*//"`
 				$patches_files/$j
 
 				installed_patches[${#installed_patches[@]}]="$j"
