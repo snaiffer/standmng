@@ -51,7 +51,7 @@ setssh()
 		fi
 	fi
 
-	if [ ! -e /root/.ssh/id_rsa ]
+	if [ ! -e /root/.ssh/id_rsa ] #replace root for ~ ????
 	then
 		expect -c "spawn ssh-keygen -t rsa
 			expect \"id_rsa): \"
