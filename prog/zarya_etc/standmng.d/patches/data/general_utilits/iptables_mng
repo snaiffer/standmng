@@ -49,7 +49,7 @@ case $what_todo in
 		del
 		;;
 	*)
-		echo "Usage: $0 { add <ip_addr> | del <ip_addr> }"
+		echo "Usage: $0 { add <port> | del <port> }"
 		exit 1
 		;;
 esac
