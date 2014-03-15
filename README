@@ -1,12 +1,6 @@
 
-Installing:
-  ) Mount and set repos:
-    ZaryaCOD
-    ZaryaRDBMS
-  ) Install package which is contained standmng:
-# yum -y install postgresql-test
-  ) Relogin
-  ) Now you can use standmng (for help: "standmng --help")
+standmng is a system of bash-scripts which allow to automatize a process of servers deployment which will be working together.
+For example in this repo standmng is set for RDBMS cluster based on PostgreSQL and Pgpool.
 
 Using:
   Example for Master-Slave cluster:
@@ -15,14 +9,13 @@ Using:
     $ standmng add Balancer 192.168.51.47
     $ standmng add Client 192.168.51.48
     $ standmng modes set master_slave
-    
 
 Passwords for users:
   The prog need to know passwords from all users of the machine.
   The information about passwords and other setting is stored in /usr/etc/zarya/standmng_local.conf
   By default all passwords are "123456".
   If you want to change the passwords change them in standmng_local.conf.
-    How I've tried:
+    Example:
     ) Installed standmng
     # yum install postgresql-test
     ) Change passwords

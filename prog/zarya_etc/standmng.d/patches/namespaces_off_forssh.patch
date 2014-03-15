@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo "Turning off namespace for ssh..."
-sed -i "/.*pam_namespace.*/ s/^/#/" /etc/pam.d/sshd

@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo "Installing rsync..."
-yum install -y -q rsync
